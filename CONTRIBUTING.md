@@ -94,6 +94,17 @@ drop increases fuel, an off-target drop does not, and switching away from the
 theme removes the live layer. Check the woodpile and fire at more than one
 screen shape; the desktop uses aspect-preserving center crop.
 
+For a repeatable wildlife art/interaction preview, launch the two real scene
+views with a shared fire and visitor:
+
+```sh
+app-sandbox launch -- bash scripts/preview-fox
+```
+
+The preview-only toolbar can play a visit immediately, freeze it for inspection,
+startle it, or pause/resume. Click near the fox in either scene to exercise real
+input. Production has no extra buttons or forced visits.
+
 Keep these rules from [docs/NOTES.md](docs/NOTES.md):
 
 - No network, no web view, no extra background process. Wallpaper mode is an

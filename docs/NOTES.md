@@ -15,6 +15,8 @@ ui/fire/                 plain QtQuick, no qs.* imports (renders standalone)
   panel.js               popup width, 3:2 height, corner-drag projection
   sound.js               fire layer gains from heat and boost
   night.js               cricket and frog scheduling
+  wildlife.js            shared fox encounter timing, route, poses and startle
+  fox.js                 hand-pixelled sprites, contact shadow and rock occlusion
   FireState.qml          bindable wrapper around fire.js state, timers, sound toggle
   FirePopup.qml          header, scene, footer, keys
   FireScene.qml          Canvas, pointer input, toast
@@ -80,6 +82,39 @@ The scene Canvas is 360 x 240 logical and scaled to the 388 px interior with `sm
 - The ratio has to come from the window. With fractional scaling on Wayland, `Screen.devicePixelRatio` reports 2 while the window uses 1.33 or 1.6, which left the art in the top-left of the scene when the decoder used the screen ratio. Offscreen runs can't show this because both values match there. A new layer-shell window also passes through other ratios (2, then 1, then 1.33) before it settles, so art decoded at a stale ratio is decoded again.
 
 Per frame, fire.js flags the tiles it drew into; the scene recopies those and last frame's tiles, writing only pixels that changed.
+
+## Wildlife
+
+`FireState` owns one ephemeral wildlife state alongside the fire, with a separate
+RNG seeded at session creation. It uses the existing simulation driver, only
+while a popup or wallpaper is active. First visit: 45–100 active seconds;
+subsequent gaps: 150–360 seconds. A visit walks from behind the right boulder
+into the clearing (8 s), pauses (3 s), sniffs (4 s), listens (3 s) and walks back
+(8 s). A scene click within 24 px of the body turns it towards cover, alerts for
+0.35 s, then runs home at twice walking speed. Repeated clicks cannot delay its
+escape. Fire controls and unrelated scene clicks do not startle it.
+
+The artwork in `fox.js` is hand-positioned pixel polygons, compiled into four
+small palette-indexed frames per pose at module load. Gait follows distance;
+sniffing and listening use pose time. The coat changes from cool moonlight to
+warm firelight as it approaches a lit hearth. A cached silhouette of the right
+rock/grass cluster hides the animal as it enters and leaves. A small blended
+contact shadow anchors its feet. The approved background remains unchanged.
+
+`FireScene` draws this layer into the fire's framebuffer and appends its bounds
+to the same dirty list. Both old and new sprite positions therefore participate
+in incremental copying, including the last frame when the animal disappears.
+No extra Canvas, animation timer, audio or persisted state is introduced. With
+all views inactive, current encounters are dismissed and the waiting countdown
+pauses. Gaps over one second dismiss/reschedule rather than catching up. Existing
+frog/cricket audio is unchanged; the fox is the first visual wildlife visitor.
+
+The sandbox fixture `scripts/preview-fox` offers immediate/frozen encounters in
+a real scene and popup sharing one state. `tst_wildlife.qml` exercises local
+clicks, shared reactions, wallpaper/hidden/suspend lifetimes, and captures both
+views at 1x/2x. The Node QML gate compares their pixels and verifies that a
+departed fox leaves the exact original scene with no trails, without pinning a
+particular sprite design.
 
 ## Desktop wallpaper
 

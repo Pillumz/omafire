@@ -695,7 +695,12 @@ function view32(fb) {
     return _u32;
 }
 function markDirty(x0, y0, x1, y1) {
-    var list = _rects;
+    includeRect(_rects, x0, y0, x1, y1);
+}
+
+// Additional scene layers use the same dirty list, so old sprite positions
+// are restored by the existing previous-frame tile copying path.
+function includeRect(list, x0, y0, x1, y1) {
     if (!list) return;
     x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
     x1 = Math.min(W, Math.ceil(x1)); y1 = Math.min(H, Math.ceil(y1));
@@ -813,7 +818,7 @@ if (typeof module !== "undefined" && module.exports) {
         serialize: serialize, restore: restore,
         roundByte: roundByte, createFrame: createFrame, prepareBackground: prepareBackground, render: render, drawLog: drawLog,
         cachedBackground: cachedBackground, cacheBackground: cacheBackground, drawMoonlight: drawMoonlight,
-        createRects: createRects, RECT_MAX: RECT_MAX,
+        createRects: createRects, includeRect: includeRect, RECT_MAX: RECT_MAX,
         iconCells: iconCells, ICON_SIZE: ICON_SIZE, ICON_COLORS: ICON_COLORS
     };
 }

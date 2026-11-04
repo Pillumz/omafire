@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Window
 import "fire.js" as Fire
+import "fox.js" as Fox
 
 // The 360 x 240 scene. fire.js composites each frame into a framebuffer; the
 // canvas copies only what changed into its image and the item is scaled
@@ -252,6 +253,8 @@ Item {
             var cur = flip ? rectsA : rectsB, prev = flip ? rectsB : rectsA;
             flip = !flip;
             Fire.render(fb, root.fire.sim, bg, cur);
+            var foxBounds = Fox.draw(fb, root.fire.wildlife.fox, root.fire.heat);
+            if (foxBounds) Fire.includeRect(cur, foxBounds[0], foxBounds[1], foxBounds[2], foxBounds[3]);
             if (fullLeft > 0) {
                 // Counts only once the window has presented since the last
                 // full frame (or when there is no window to ask).

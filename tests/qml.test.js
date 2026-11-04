@@ -81,6 +81,19 @@ for (const scale of [1, 2]) {
     console.log(`# ${scale}x whole scene: ${(100 * same / n).toFixed(2)}% of canvas pixels match fire.js at the same state`);
     assert.ok(same / n > 0.999, "the native scene shows exactly the fire.js frame");
 
+    // tst_wildlife.qml holds the fire clock still while a shared fox visits
+    // and runs away. Compare real scene grabs (QtTest's grabImage truncates
+    // to logical size at 2x) rather than locking a particular sprite design.
+    const wildlife = name => readRGBA(path.join(OUT, `wildlife-${name}-${scale}x.png`));
+    const samePixels = (a, b) => a.width === b.width && a.height === b.height
+      && Buffer.from(a.data).equals(Buffer.from(b.data));
+    const beforeFox = wildlife("before"), arrivedFox = wildlife("arrived-A");
+    assert.equal(beforeFox.width, 360 * scale);
+    assert.ok(!samePixels(beforeFox, arrivedFox), "a fox really appears in the scene");
+    assert.ok(samePixels(arrivedFox, wildlife("arrived-B")), "the same visitor appears in both views");
+    assert.ok(samePixels(wildlife("run-A"), wildlife("run-B")), "clicking one view startles both");
+    assert.ok(samePixels(beforeFox, wildlife("departed")), "departing restores all sprite and shadow pixels without trails");
+
     // tst_lifecycle.qml: after the window hides and shows, the scene moves
     // window, or the canvas is rebuilt around the same fire, every pixel of
     // the scene must still be the fire.js frame (not just the parts that
