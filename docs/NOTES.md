@@ -15,6 +15,8 @@ ui/fire/                 plain QtQuick, no qs.* imports (renders standalone)
   panel.js               popup width, 3:2 height, corner-drag projection
   sound.js               fire layer gains from heat and boost
   night.js               cricket and frog scheduling
+  wildlife.js            shared fox encounter timing, route, poses and startle
+  fox.js                 hand-pixelled sprites, contact shadow and rock occlusion
   FireState.qml          bindable wrapper around fire.js state, timers, sound toggle
   FirePopup.qml          header, scene, footer, keys
   FireScene.qml          Canvas, pointer input, toast
@@ -74,12 +76,46 @@ The native moonlight overlay leaves the original artwork unchanged. It gently br
 The scene Canvas is 360 x 240 logical and scaled to the 388 px interior with `smooth: false`. Qt 6.12 quirks found and worked around:
 
 - `putImageData(img, x, y)` without the four dirty arguments draws nothing.
-- With a non-zero dirty origin it crops the image and then offsets by the origin again, so the region lands in the wrong place. OmaFire puts whole 24 x 24 tile images at their own position with a 0,0 origin.
+- With a non-zero dirty origin it crops the image and then offsets by the origin again, so the region lands in the wrong place. OmaFire puts image segments up to 60 x 12 pixels at their own position with a 0,0 origin.
 - `CanvasPixelArray` stores premultiplied pixels: set alpha before color.
+- [QTBUG-150544](https://qt-project.atlassian.net/browse/QTBUG-150544): numeric-size `createImageData(width, height)` omits the allocated image storage from Qt's external-memory accounting, then subtracts it when collected. Repeated plugin teardown can underflow the unsigned counter and cause continuous garbage collection, starving the entire shell. Both segment and full-frame buffers instead use the correctly-accounted `getImageData(0, 0, width, height)` path. Since readback copies existing pixels, `imageBuffer()` explicitly initializes every pixel to opaque black, alpha first. Buffers are still cached/reused, and the full-frame buffer still has the deliberate `Fire.H + 1` height. No private-counter manipulation, garbage-collector changes or Qt patch is required. The original fire without wildlife can also trigger the defect.
 - `putImageData` draws through the device-pixel-ratio scale, but `getImageData` reads raw device pixels, and a scaled `drawImage` filters. The background decoder canvas is therefore sized in device pixels and draws the art with `ctx.scale(1/dpr)`, which reproduces ImageMagick's decode exactly at 1x, 1.5x and 2x.
 - The ratio has to come from the window. With fractional scaling on Wayland, `Screen.devicePixelRatio` reports 2 while the window uses 1.33 or 1.6, which left the art in the top-left of the scene when the decoder used the screen ratio. Offscreen runs can't show this because both values match there. A new layer-shell window also passes through other ratios (2, then 1, then 1.33) before it settles, so art decoded at a stale ratio is decoded again.
 
 Per frame, fire.js flags the tiles it drew into; the scene recopies those and last frame's tiles, writing only pixels that changed.
+
+## Wildlife
+
+`FireState` owns one ephemeral wildlife state alongside the fire, with a separate
+RNG seeded at session creation. It uses the existing simulation driver, only
+while a popup or wallpaper is active. First visit: 45–100 active seconds;
+subsequent gaps: 150–360 seconds. A visit walks from behind the right boulder
+into the clearing (8 s), pauses (3 s), sniffs (4 s), listens (3 s) and walks back
+(8 s). A scene click within 24 px of the body turns it towards cover, alerts for
+0.35 s, then runs home at twice walking speed. Repeated clicks cannot delay its
+escape. Fire controls and unrelated scene clicks do not startle it.
+
+The artwork in `fox.js` is hand-positioned pixel polygons, compiled into four
+small palette-indexed frames per pose at module load. Gait follows distance;
+sniffing and listening use pose time. The coat changes from cool moonlight to
+warm firelight as it approaches a lit hearth. A cached silhouette of the right
+rock/grass cluster hides the animal as it enters and leaves. A small blended
+contact shadow anchors its feet. The approved background remains unchanged.
+
+`FireScene` draws this layer into the fire's framebuffer and appends its bounds
+to the same dirty list. Both old and new sprite positions therefore participate
+in incremental copying, including the last frame when the animal disappears.
+No extra Canvas, animation timer, audio or persisted state is introduced. With
+all views inactive, current encounters are dismissed and the waiting countdown
+pauses. Gaps over one second dismiss/reschedule rather than catching up. Existing
+frog/cricket audio is unchanged; the fox is the first visual wildlife visitor.
+
+The sandbox fixture `scripts/preview-fox` offers immediate/frozen encounters in
+a real scene and popup sharing one state. `tst_wildlife.qml` exercises local
+clicks, shared reactions, wallpaper/hidden/suspend lifetimes, and captures both
+views at 1x/2x. The Node QML gate compares their pixels and verifies that a
+departed fox leaves the exact original scene with no trails, without pinning a
+particular sprite design.
 
 ## Desktop wallpaper
 

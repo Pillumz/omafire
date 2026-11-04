@@ -695,7 +695,12 @@ function view32(fb) {
     return _u32;
 }
 function markDirty(x0, y0, x1, y1) {
-    var list = _rects;
+    includeRect(_rects, x0, y0, x1, y1);
+}
+
+// Additional scene layers use the same dirty list, so old sprite positions
+// are restored by the existing previous-frame tile copying path.
+function includeRect(list, x0, y0, x1, y1) {
     if (!list) return;
     x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
     x1 = Math.min(W, Math.ceil(x1)); y1 = Math.min(H, Math.ceil(y1));
@@ -713,8 +718,9 @@ function markDirty(x0, y0, x1, y1) {
 
 // The reference draw(), into fb. bg is a prepared 360 x 240 RGBA buffer or
 // null for the reference's fallback fill. If `rects` (from createRects) is
-// given it receives the rectangles drawn over the background.
-function render(fb, s, bg, rects) {
+// given it receives the rectangles drawn over the background. An optional
+// scene layer draws before held/thrown logs, which must remain foreground.
+function render(fb, s, bg, rects, sceneLayer) {
     var i, p;
     _rects = rects || null;
     if (rects) rects.n = 0;
@@ -740,6 +746,7 @@ function render(fb, s, bg, rects) {
         fillRect(fb, px, py, p.s, p.s, p.age < 0.5 ? C.sparkHot : C.sparkCool, Math.max(0, 1 - p.age / p.life));
         markDirty(px, py, px + p.s, py + p.s);
     }
+    if (sceneLayer) sceneLayer(fb, rects);
     var lx, ly;
     if (s.flight) {
         var pr = Math.min(1, s.flight.age / FLIGHT_SECONDS), ease = 1 - (1 - pr) * (1 - pr);
@@ -813,7 +820,7 @@ if (typeof module !== "undefined" && module.exports) {
         serialize: serialize, restore: restore,
         roundByte: roundByte, createFrame: createFrame, prepareBackground: prepareBackground, render: render, drawLog: drawLog,
         cachedBackground: cachedBackground, cacheBackground: cacheBackground, drawMoonlight: drawMoonlight,
-        createRects: createRects, RECT_MAX: RECT_MAX,
+        createRects: createRects, includeRect: includeRect, RECT_MAX: RECT_MAX,
         iconCells: iconCells, ICON_SIZE: ICON_SIZE, ICON_COLORS: ICON_COLORS
     };
 }

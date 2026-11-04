@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "test.omafire-reload",
+  "name": "OmaFire reload witness (sandbox only)",
+  "version": "0.0.1",
+  "author": "OmaFire contributors",
+  "description": "Public IPC witness for completed bar-widget reconstruction",
+  "kinds": ["bar-widget"],
+  "entryPoints": {"barWidget": "Probe.qml"},
+  "barWidget": {"displayName": "Reload witness", "defaultSection": "right"}
+}

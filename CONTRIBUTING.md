@@ -48,10 +48,12 @@ omarchy plugin add https://github.com/<you>/omafire --enable
 mise run test
 ```
 
-`mise run test` runs everything: the fire math, a Chromium comparison against
+`mise run test` runs the standard suite: the fire math, a Chromium comparison against
 the reference art, offscreen QML tests and, on a live desktop, a Quickshell
 integration test and `omarchy plugin validate`. Tests that need a missing tool
-skip and say so. CI runs the same command.
+skip and say so. CI runs the same command. For Canvas allocation/lifetime
+changes, also run the [real same-process reload check](docs/RELOADS.md) in a
+disposable VM; fresh launches and popup-only tests do not cover global reloads.
 
 ### Isolated desktop preview
 
@@ -93,6 +95,17 @@ the desktop keeps animating from the same fire. Verify a successful desktop log
 drop increases fuel, an off-target drop does not, and switching away from the
 theme removes the live layer. Check the woodpile and fire at more than one
 screen shape; the desktop uses aspect-preserving center crop.
+
+For a repeatable wildlife art/interaction preview, launch the two real scene
+views with a shared fire and visitor:
+
+```sh
+app-sandbox launch -- bash scripts/preview-fox
+```
+
+The preview-only toolbar can play a visit immediately, freeze it for inspection,
+startle it, or pause/resume. Click near the fox in either scene to exercise real
+input. Production has no extra buttons or forced visits.
 
 Keep these rules from [docs/NOTES.md](docs/NOTES.md):
 

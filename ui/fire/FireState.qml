@@ -1,5 +1,6 @@
 import QtQuick
 import "fire.js" as Fire
+import "wildlife.js" as Wildlife
 
 // One fire: the simulation from fire.js plus the bindable properties the
 // popup, the scene, and the bar icon read. Plain QtQuick, no shell imports,
@@ -18,6 +19,9 @@ QtObject {
     property bool autoTick: true
 
     property var sim: Fire.createState()
+    // One visitor for every view, with a separate random stream. Wildlife is
+    // ephemeral: no saved animals, overdue visits or background catch-up.
+    property var wildlife: Wildlife.create(Date.now())
     // Bumped whenever sim changes; the scene and icon repaint on it.
     property int revision: 0
 
@@ -75,13 +79,18 @@ QtObject {
         var now = Date.now();
         var dt = (now - lastWall) / 1000;
         lastWall = now;
-        if (dt > 0) Fire.tick(sim, dt, animating);
+        if (dt > 0) {
+            Fire.tick(sim, dt, animating);
+            if (animating) Wildlife.advance(wildlife, dt);
+        }
         sync();
     }
 
     // Test hook: advance by a fixed amount.
     function advance(seconds, particles) {
-        Fire.tick(sim, seconds, particles === undefined ? animating : particles);
+        var visibleStep = particles === undefined ? animating : particles;
+        Fire.tick(sim, seconds, visibleStep);
+        if (visibleStep) Wildlife.advance(wildlife, seconds);
         lastWall = Date.now();
         sync();
     }
@@ -96,6 +105,9 @@ QtObject {
     }
     function poke() { step(); Fire.poke(sim); sync(); changedByUser(); }
     function pointerDown(x, y) {
+        // Nearby scene clicks startle; buttons and unrelated desktop clicks
+        // do not. No fuel changes, sound effects or notification for wildlife.
+        if (Wildlife.spook(wildlife, x, y)) { sync(); return "spook"; }
         var r = Fire.pointerDown(sim, x, y);
         sync();
         if (r === "poke") changedByUser();
@@ -178,7 +190,10 @@ QtObject {
         var dt = (now - lastWall) / 1000;
         lastWall = now;
         if (dt > 0) Fire.tick(sim, dt, wasAnimating);
-        if (!animating) Fire.pointerCancel(sim);
+        if (!animating) {
+            Fire.pointerCancel(sim);
+            if (wildlife.fox) Wildlife.advance(wildlife, 2);
+        }
         sync();
     }
 

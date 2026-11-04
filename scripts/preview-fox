@@ -1,0 +1,13 @@
+#!/bin/bash
+# Isolated real-component wildlife fixture, never another shell on the host.
+set -euo pipefail
+[[ ${APP_SANDBOX:-} == 1 ]] || {
+    echo "Run inside the VM: app-sandbox launch -- bash scripts/preview-fox" >&2
+    exit 1
+}
+root="$(cd "$(dirname "$0")/.." && pwd)"
+temp="$(mktemp -d /tmp/omafire-fox.XXXXXX)"
+trap 'rm -rf "$temp"' EXIT
+cp -r "$root/ui" "$root/assets" "$temp/"
+cp "$root/scripts/fox-preview.qml" "$temp/shell.qml"
+quickshell -p "$temp"

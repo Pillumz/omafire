@@ -21,6 +21,7 @@ That's the whole install. The fire is in the right side of your bar.
 - **Add a log.** Click **+ Add log**, or drag one from the woodpile at the lower left and drop it on the fire. One log is about three more minutes of fire.
 - **Stoke it.** **Stoke** makes it flare up for a bit. It doesn't add wood, so stoking an empty fire pit just gets you a polite note.
 - **Poke the coals.** Click the coals for a shower of sparks. Very satisfying, no practical value.
+- **Watch for a visitor.** A pixel-art fox occasionally emerges from behind the right-hand rocks, pauses, sniffs the clearing and heads back into the trees. Click near it and it startles and runs for cover. It shares the same visit across the popup and wallpaper, and never needs feeding or attention.
 - **Listen to it.** **Sound on** plays the fire. It follows the fire: a low fire is soft embers, a steady one crackles, a hot or stoked one roars, and adding a log or stoking has its own sound. With the sound on, crickets chirp in short phrases from off in the trees, and a frog calls now and then. Both stay soft, as if they were across the water.
 - **Keep the ambience.** Turn **Keep sound when closed** on to let the fire, crickets and frogs keep playing after you close the popup. Turn **Sound off** to silence everything. Background sound defaults to off; its preference is remembered, but sound itself always starts off after a shell restart or login. Closing the popup stops its scene animation; an active live wallpaper keeps animating.
 - **Leave it alone.** A full load burns for about 13 minutes, down to glowing embers, then coals, then rest. It keeps burning while the popup is closed, and after a restart or a suspend it picks up where it would have been.
@@ -72,7 +73,7 @@ On the exposed desktop, drag a log from the woodpile onto the fire, or click the
 coals for sparks. Normal windows stay above it and it never takes keyboard focus.
 Desktop double-clicks do not open the wallpaper or theme picker while the live
 scene is active. Use **Super+Space** to open Omarchy's menu and change themes.
-Clicks outside the woodpile and coals do nothing.
+Clicks near a visiting fox spook it; other clicks outside the woodpile and coals do nothing.
 
 The scene fills each screen without stretching, cropping equally at opposite
 edges. Wide or tall screens may crop useful parts of the artwork. There are no
@@ -181,6 +182,10 @@ Each view draws only while active, and copies only the parts of the picture that
 
 State lives in `~/.local/state/omafire/state.json` (or under `$XDG_STATE_HOME`). Sound is never saved. The background-sound preference is remembered in `panel.json` beside that file. Drag the lower-left corner to resize the panel; its width is remembered there too, and the next open uses it. The scene stays 3:2.
 
+The fox is hand-drawn pixel art with walking, sniffing, listening and running poses, a small contact shadow, and cooler colours away from the fire. Its first visit comes after roughly 45–100 seconds of active scene time, with 2½–6 minute quiet gaps between visits. Visits stop when neither scene is active, and a suspend dismisses the current visitor rather than replaying missed encounters. No extra timer, process or saved animal state.
+
+![A fox visits the clearing, sniffs, then runs back to cover when startled](docs/screenshots/fox-visit.gif)
+
 More detail, including the numbers, is in [docs/NOTES.md](docs/NOTES.md).
 
 ## Development
@@ -190,6 +195,8 @@ mise run test
 ```
 
 That runs the simulation tests, a pixel comparison against the original prototype (in Node and in headless Chromium), offscreen QML tests at 1x and 2x, a Quickshell integration run, and `omarchy plugin validate`. Images land in `tests/out/`.
+
+The [same-process reload check](docs/RELOADS.md) is a separate, VM-only workflow. It exercises the real shell through 20 full plugin reloads, checking that its process stays responsive and the wallpaper and bar recover. It is deliberately not run against your desktop by the regular suite.
 
 `mise run sound` rebuilds the fire sounds (`assets/fire-*.wav`) from `scripts/gen-fire.py`, and the cricket and frog calls from `scripts/gen-night.py`.
 
