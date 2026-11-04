@@ -60,3 +60,52 @@ counts and RSS, so this is a lifecycle regression check, not a hardware benchmar
 or proof that all Qt versions are affected. If the VM shell lacks the global
 unload/rebuild lifecycle, investigate/report that mismatch rather than replacing
 it with a mock or changing production shell source.
+
+## Verified workaround — 2026-11-04
+
+The original `createImageData(width, height)` implementation reproduced
+[QTBUG-150544](https://qt-project.atlassian.net/browse/QTBUG-150544) during the
+third full reload: reconstruction exceeded 15 seconds, wallpaper and bar
+vanished, and main-thread CPU rose from 3–3.5% to a sustained 98–99% of one core.
+The process later recovered some layers slowly; this was starvation, not a
+claim of permanent deadlock.
+
+After replacing both allocations with initialized `getImageData` buffers, two
+separate VM runs each completed 20 consecutive reloads in their original shell
+process. There was no restart within either measured run. The final integrated
+harness was rerun by the main session, separately from its author's run:
+
+| Measurement | Main session's patched 20-reload run |
+| --- | --- |
+| Same shell PID throughout | 7863 |
+| Wallpaper/bar reconstruction | 0.555–0.791 s, median 0.632 s |
+| Shell ping | 6.2–13.8 ms, median 7.55 ms |
+| Main-thread CPU after reloads | 4–6.5% of one core |
+| Whole-process CPU after reloads | 20–27.5% of one core |
+| Sampled RSS | 1115–1251 MiB; final 1150 MiB |
+
+The RSS figures include the entire shell and its software-rendered 4K desktop,
+not OmaFire alone. They are not a hardware performance benchmark. These reload
+checks used guest Qt 6.12.0-1 and Quickshell 0.3.2; the earlier diagnosis had
+independently confirmed the underlying bug with the exact HOME Qt libraries.
+No private accounting state or garbage-collector settings were changed.
+
+The standard suite passed all 52 checks with no skips and unchanged reference
+pixels at 1x/2x. Native previews were also inspected at 1.6x and 4/3x, including
+a nearby-click fox retreat. After the main reload run, five popup reopen cycles,
+three decoded audio streams to a guest-only null sink, background audio and mute
+were exercised in the same surviving shell. Real popup and wallpaper captures
+were inspected rather than relying only on IPC/layer presence.
+
+Old-code failure (separate baseline VM):
+
+![Original allocation path loses the wallpaper and bar](screenshots/reload-broken.webp)
+
+Patched main-session VM after 20 reloads:
+
+![Patched allocation path retains a painted campsite and bar](screenshots/reload-fixed.webp)
+
+The workaround prevents this reproduced accounting failure; it is not a promise
+against unrelated Qt or desktop defects. A running process whose accounting is
+already corrupted still needs a fresh start. Production deployment was not part
+of these tests.

@@ -48,10 +48,12 @@ omarchy plugin add https://github.com/<you>/omafire --enable
 mise run test
 ```
 
-`mise run test` runs everything: the fire math, a Chromium comparison against
+`mise run test` runs the standard suite: the fire math, a Chromium comparison against
 the reference art, offscreen QML tests and, on a live desktop, a Quickshell
 integration test and `omarchy plugin validate`. Tests that need a missing tool
-skip and say so. CI runs the same command.
+skip and say so. CI runs the same command. For Canvas allocation/lifetime
+changes, also run the [real same-process reload check](docs/RELOADS.md) in a
+disposable VM; fresh launches and popup-only tests do not cover global reloads.
 
 ### Isolated desktop preview
 

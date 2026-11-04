@@ -196,6 +196,8 @@ mise run test
 
 That runs the simulation tests, a pixel comparison against the original prototype (in Node and in headless Chromium), offscreen QML tests at 1x and 2x, a Quickshell integration run, and `omarchy plugin validate`. Images land in `tests/out/`.
 
+The [same-process reload check](docs/RELOADS.md) is a separate, VM-only workflow. It exercises the real shell through 20 full plugin reloads, checking that its process stays responsive and the wallpaper and bar recover. It is deliberately not run against your desktop by the regular suite.
+
 `mise run sound` rebuilds the fire sounds (`assets/fire-*.wav`) from `scripts/gen-fire.py`, and the cricket and frog calls from `scripts/gen-night.py`.
 
 ## Credits
