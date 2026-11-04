@@ -18,7 +18,6 @@ Item {
     Component.onDestruction: {
         FireSession.wallpaperActive = false;
         FireSession.fire.pointerCancel();
-        if (FireSession.widgets.length === 0) FireSession.fire.shutdown();
     }
 
     FileView {

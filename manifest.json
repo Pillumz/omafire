@@ -6,7 +6,7 @@
   "author": "Wes Grimes",
   "license": "MIT",
   "homepage": "https://github.com/wesleygrimes/omafire",
-  "description": "A tiny campfire in your bar. Add wood, stoke it, let it burn down.",
+  "description": "One live campfire for your bar and desktop. Add wood, stoke it, let it burn down.",
   "kinds": [
     "bar-widget",
     "service"

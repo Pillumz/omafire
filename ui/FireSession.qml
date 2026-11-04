@@ -32,6 +32,7 @@ Singleton {
     property var owner: null
     readonly property bool isOpen: owner !== null
     property bool wallpaperActive: false
+    onWallpaperActiveChanged: if (!wallpaperActive && widgets.length === 0) fire.shutdown()
 
     property FireState fire: FireState {
         open: session.isOpen

@@ -1,6 +1,6 @@
 # OmaFire
 
-This fork of [Wes Grimes's OmaFire](https://github.com/wesleygrimes/omafire) adds optional background ambience: sound can keep playing when the popup is closed. The original quiet-by-default behavior is unchanged.
+This fork of [Wes Grimes's OmaFire](https://github.com/wesleygrimes/omafire) adds an interactive desktop wallpaper sharing the widget's live fire, plus optional background ambience when the popup is closed. The original quiet-by-default behavior is unchanged.
 
 A tiny campfire for your Omarchy bar.
 
@@ -43,7 +43,7 @@ omarchy-shell wesleygrimes.omafire addLog
 omarchy-shell wesleygrimes.omafire status
 ```
 
-The functions are `toggle`, `open`, `close`, `addLog`, `stoke`, `poke`, `sound`, `backgroundSound`, and `status`. `sound` toggles playback; `backgroundSound` toggles whether sound may continue with the popup closed. `status` prints JSON with fuel, heat, boost, status, open, sound, backgroundSound, and audioPlaying.
+The functions are `toggle`, `open`, `close`, `addLog`, `stoke`, `poke`, `sound`, `backgroundSound`, and `status`. `sound` toggles playback; `backgroundSound` toggles whether sound may continue with the popup closed. `status` prints JSON with fuel, heat, boost, status, open, wallpaper, sound, backgroundSound, and audioPlaying.
 
 To open it from the keyboard, add a binding to `~/.config/hypr/bindings.lua`:
 
@@ -54,6 +54,8 @@ o.bind("SUPER + ALT + O", "OmaFire", "omarchy-shell wesleygrimes.omafire toggle"
 `SUPER + ALT + O` is free on a stock Omarchy 4 install. Check `omarchy-menu-keybindings --print` if you've moved things around.
 
 ## Interactive desktop wallpaper
+
+![The desktop and popup sharing one live campfire](docs/screenshots/wallpaper.webp)
 
 Install the [Campfire theme](https://github.com/Pillumz/omarchy-campfire-theme)
 alongside this plugin. With that theme selected, the desktop and popup show the

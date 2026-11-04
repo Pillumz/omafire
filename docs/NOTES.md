@@ -115,6 +115,28 @@ sound or bypass the saved background-sound preference.
 
 RSS is the whole standalone Quickshell process (Qt Quick and friends), not OmaFire's share inside the real shell. In-process timing: about 5.4 ms of JS render plus about 3 ms of tile copies per frame. Stepping the simulation at 20 Hz instead of 60 Hz made no measurable difference. These numbers need repeating on real hardware inside the live shell.
 
+## Wallpaper verification (2026-11-04)
+
+Exercised the actual plugin in an app-sandbox Omarchy VM at 3840x2160, scale
+1.6: successful and off-target desktop log drops, widget actions, theme switches
+away and back, one wallpaper surface per output when adding/removing a second
+1920x1080 output at scale 2, and audio lifetime with the bar widget removed.
+The last-view audio shutdown is also covered by the Quickshell integration test.
+The full suite passed with a guest-only null audio sink (52 tests, no skips).
+
+Whole-shell CPU over 8-second samples on that 4-vCPU, software-rendered VM:
+
+| Active views | CPU (one core) |
+| --- | --- |
+| Neither, popup closed | about 0.9% |
+| Wallpaper only | about 28% |
+| Wallpaper and popup | about 42% |
+
+These are VM observations, not a physical-GPU benchmark or a prediction for
+other machines. The original low-resolution CPU renderer remains unchanged.
+An older guest shell intermittently timed out on its fast IPC socket after
+monitor hotplug; direct Quickshell IPC still worked. No shell changes were made.
+
 ## Live measurements
 
 Inside the live omarchy-shell on this VM, after the perf pass (9cbe5b6): `utime + stime` of the omarchy-shell process over 10 s, at 100 Hz clock ticks.
@@ -138,7 +160,7 @@ RSS is about 480 MB for the whole shell, not OmaFire's share.
 
 A snap is a noise burst with a 1.2 ms onset and a 5-25 ms decay, through two broad bands (Q 1.3 and 1.6, about 0.9-1.9 kHz and 2-3.2 kHz) and, for big ones, a low knock band. Broad bands and the soft onset are what keep it from sounding like a pitched drip or like electrical static. Crackles come in flurries: the rate follows a slow random curve raised to the fourth power, so there are calm stretches between bursts. A quiet bed of tiny dark snaps sits under everything so no snap pops out of silence. Each loop is soft-limited, darkened at 5 kHz, and crossfaded over 0.8 s so it is seamless. The loops have different lengths so the mix doesn't repeat audibly.
 
-Playback uses `MediaPlayer` + `AudioOutput`, not `SoundEffect`: SoundEffect refused the 22.05 kHz mono format on PipeWire because it doesn't resample. All three loops play while sound is on, each at `0.5 * gain` from `ui/fire/sound.js`: embers fade in by heat 0.08 and ease back 30% when hot, crackle rises from heat 0.08 to 0.55, roar comes in from 0.6 to 0.95 or with boost (a stoke or a fresh log). Levels ease over 0.6 s; on/off fades over 0.3 s. Adding a log (button, key, or drag) and a successful stoke play their one-shots at 0.2. Playing requires sound on and either the popup open or the saved `backgroundSound` preference enabled. By default closing fades out and stops the players; with background sound enabled, closing leaves playback and the night scheduler uninterrupted while the scene stops drawing. Unregistering the last bar widget when no wallpaper is active (disable, removal or the last monitor disappearing) stops and destroys the players and resets sound to off; removing one of several widgets leaves the shared fire playing. The QML singleton itself can outlive disabled plugins. No output device, a missing QtMultimedia, or a player error shows "Sound unavailable." and leaves it off.
+Playback uses `MediaPlayer` + `AudioOutput`, not `SoundEffect`: SoundEffect refused the 22.05 kHz mono format on PipeWire because it doesn't resample. All three loops play while sound is on, each at `0.5 * gain` from `ui/fire/sound.js`: embers fade in by heat 0.08 and ease back 30% when hot, crackle rises from heat 0.08 to 0.55, roar comes in from 0.6 to 0.95 or with boost (a stoke or a fresh log). Levels ease over 0.6 s; on/off fades over 0.3 s. Adding a log (button, key, or drag) and a successful stoke play their one-shots at 0.2. Playing requires sound on and either the popup open or the saved `backgroundSound` preference enabled. By default closing fades out and stops the players; with background sound enabled, closing leaves playback and the night scheduler uninterrupted while the popup scene stops drawing. Unregistering the last bar widget when no wallpaper is active (disable, removal or the last monitor disappearing) stops and destroys the players and resets sound to off; removing one of several widgets leaves the shared fire playing. The QML singleton itself can outlive disabled plugins. No output device, a missing QtMultimedia, or a player error shows "Sound unavailable." and leaves it off.
 
 Qt Multimedia ignores PipeWire's "Dummy Output" sink, so a machine with no sound hardware (a VM, a headless box reached over remote desktop) has no output and sound is unavailable. A null sink (`pactl load-module module-null-sink`) set as default gives Qt a device.
 
@@ -184,8 +206,8 @@ The reference asks for `ui-monospace, SFMono-Regular, Consolas, monospace`. On t
 
 The Chromium, Quickshell and qmltestrunner tests skip when those tools aren't installed. `tests/reference/` holds the prototype script and fragment with the inline image data removed, plus the approved capture.
 
-## Not verified here
+## Remaining verification limits
 
-- Running inside the live omarchy-shell bar (installation was left to Wes). The integration test uses stand-ins for `BarWidget`, `BarIconButton`, `KeyboardPanel`, `ShellIpc`, `Style`, `Border`, one set per host API (`tests/integration/hosts/omarchy-4.0` and `omarchy-4.5`).
+- The owner's live desktop and physical-GPU performance. The automated compatibility integration uses stand-ins for `BarWidget`, `BarIconButton`, `KeyboardPanel`, `ShellIpc`, `Style`, `Border`, one set per host API (`tests/integration/hosts/omarchy-4.0` and `omarchy-4.5`). The wallpaper verification above runs the actual packaged shell in a disposable VM.
 - Bottom/side bars, monitor edges, multiple real outputs, hot reload, and suspend on real hardware. The KeyboardPanel code handles these; OmaFire adds nothing that depends on bar position.
 - Audio on real speakers.
