@@ -8,30 +8,35 @@ import "ui/fire/wildlife.js" as Wildlife
 // reading one FireState. No preview controls or forced visits ship in the UI.
 ShellRoot {
     id: root
-    FireState { id: fire; open: true }
+    FireState { id: fire; open: true; autoTick: false }
 
+    property bool playing: false
+    property real playbackRate: 1
     property int visitSeed: 1
+    Timer {
+        interval: 50; repeat: true; running: root.playing && !recorder.running
+        onTriggered: fire.advance(0.05 * root.playbackRate, true)
+    }
     function resetVisit() {
         fire.wildlife = Wildlife.create(visitSeed);
         Wildlife.startVisit(fire.wildlife);
     }
     function inspectPose(pose) {
-        fire.autoTick = false;
+        root.playing = false;
         resetVisit();
         for (var i = 0; i < 10800 && fire.wildlife.fox && fire.wildlife.fox.pose !== pose; i++)
             Wildlife.advance(fire.wildlife, 1 / 60);
         fire.sync();
     }
     function inspectAt(seconds) {
-        fire.autoTick = false;
+        root.playing = false;
         resetVisit();
         for (var i = 0; i < Math.round(seconds * 60); i++) fire.advance(1 / 60, true);
         fire.sync();
     }
     function play() {
         resetVisit();
-        fire.lastWall = Date.now();
-        fire.autoTick = true;
+        root.playing = true;
         fire.sync();
     }
 
@@ -39,13 +44,13 @@ ShellRoot {
         id: window
         title: "OmaFire — fox preview"
         implicitWidth: 1110
-        implicitHeight: 542
+        implicitHeight: 578
         color: "#101820"
 
-        Row {
-            x: 12; y: 8; spacing: 12
+        Flow {
+            x: 12; y: 8; width: 1086; spacing: 8
             Repeater {
-                model: ["Play visit", "Next fox", "Listen", "Sniff", "Rest", "Turn", "Spook", "Pause / resume"]
+                model: ["Play visit", "Next fox", "Listen", "Sniff", "Rest", "Turn", "Spook", "Pause / resume", "Step frame", "Slow / normal"]
                 Rectangle {
                     required property string modelData
                     width: label.implicitWidth + 24; height: 28
@@ -60,15 +65,26 @@ ShellRoot {
                             else if (modelData === "Sniff") root.inspectPose("sniff");
                             else if (modelData === "Rest") root.inspectPose("sit");
                             else if (modelData === "Turn") root.inspectPose("turn");
-                            else if (modelData === "Spook" && fire.wildlife.fox) fire.pointerDown(fire.wildlife.fox.x, fire.wildlife.fox.y - 12);
-                            else { fire.lastWall = Date.now(); fire.autoTick = !fire.autoTick; }
+                            else if (modelData === "Spook" && fire.wildlife.fox) { fire.pointerDown(fire.wildlife.fox.x, fire.wildlife.fox.y - 12); root.playing = true; }
+                            else if (modelData === "Step frame") { root.playing = false; fire.advance(0.05, true); }
+                            else if (modelData === "Slow / normal") root.playbackRate = root.playbackRate === 1 ? 0.25 : 1;
+                            else root.playing = !root.playing;
                         }
                     }
                 }
             }
         }
-        FireScene { id: scene; x: 0; y: 46; width: 720; height: 480; fire: fire }
-        FirePopup { x: 720; y: 46; width: 390; fire: fire; running: true }
+        FireScene { id: scene; x: 0; y: 82; width: 720; height: 480; fire: fire }
+        FirePopup { x: 720; y: 82; width: 390; fire: fire; running: true }
+    }
+    function startRecording(directory, seconds, spookAt) {
+        root.playing = false;
+        recorder.directory = directory;
+        recorder.frame = 0;
+        recorder.count = Math.round(seconds * 20);
+        recorder.startleAt = spookAt;
+        recorder.painted = scene.framesDrawn;
+        recorder.start();
     }
     // Deterministic captures of the real renderer, not a second drawing path.
     // mkdir the destination in the guest first; fetch it after recording.
@@ -109,16 +125,16 @@ ShellRoot {
         }
         function record(directory: string, seconds: real, spookAt: real): void {
             root.inspectAt(0);
-            recorder.directory = directory;
-            recorder.frame = 0;
-            recorder.count = Math.round(seconds * 20);
-            recorder.startleAt = spookAt;
-            recorder.painted = scene.framesDrawn;
-            recorder.start();
+            root.startRecording(directory, seconds, spookAt);
         }
+        function recordCurrent(directory: string, seconds: real, spookAt: real): void {
+            root.startRecording(directory, seconds, spookAt);
+        }
+        function step(seconds: real): void { root.playing = false; fire.advance(seconds, true); }
+        function slow(rate: real): void { root.playbackRate = Math.max(0.1, Math.min(1, rate)); }
         function recording(): bool { return recorder.running; }
         function spook(): void { if (fire.wildlife.fox) fire.pointerDown(fire.wildlife.fox.x, fire.wildlife.fox.y - 12); }
-        function resume(): void { fire.lastWall = Date.now(); fire.autoTick = true; }
+        function resume(): void { root.playing = true; }
         function quit(): void { Qt.quit(); }
     }
     Component.onCompleted: inspectPose("idle")

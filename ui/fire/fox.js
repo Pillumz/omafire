@@ -1,9 +1,8 @@
 .pragma library
-// A little woodland animal, painted in the campsite's native pixels. Anatomy
-// is articulated before rasterising: planted paws, hocks, shoulder, neck and a
-// trailing brush. All plates are baked once; playback only copies palette ink.
-var WIDTH = 80, HEIGHT = 44, ANCHOR_X = 40, ANCHOR_Y = 40;
-var FRAMES = 16;
+// Articulated woodland visitor at the campsite's native pixel resolution.
+// The encounter owns continuous joints and world-space paw anchors; views
+// share the last rasterised palette plate. There is no cross-fade/ghost fox.
+var WIDTH = 80, HEIGHT = 56, ANCHOR_X = 40, ANCHOR_Y = 40;
 var COLOURS = [null,
     [36,35,42], [59,40,39], [83,45,37], [107,53,36],
     [133,65,39], [155,79,44], [176,96,53], [195,119,68],
@@ -16,7 +15,6 @@ var COLOURS = [null,
 ];
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function mix(a, b, t) { return a + (b - a) * t; }
-function smooth(t) { return t * t * (3 - 2 * t); }
 function pixel(im, x, y, c) {
     x = Math.round(x) + ANCHOR_X; y = Math.round(y) + ANCHOR_Y;
     if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) im[y * WIDTH + x] = c;
@@ -42,18 +40,23 @@ function stroke(im, a, b, width, c) {
     poly(im, [[a[0]+nx,a[1]+ny],[b[0]+nx,b[1]+ny],[b[0]-nx,b[1]-ny],[a[0]-nx,a[1]-ny]], c);
 }
 function ellipse(im, cx, cy, rx, ry, c) {
-    var points = [];
-    for (var i = 0; i < 20; i++) {
-        var t = i * Math.PI / 10;
-        points.push([cx + Math.cos(t) * rx, cy + Math.sin(t) * ry]);
+    // Native-pixel scanlines avoid allocating/testing a twenty-edge polygon
+    // for each of the brush's many overlapping cross-sections.
+    if (rx <= 0 || ry <= 0) return;
+    for (var y = Math.floor(cy-ry); y <= Math.ceil(cy+ry); y++) {
+        var dy = (y+0.5-cy)/ry;
+        if (Math.abs(dy) >= 1) continue;
+        var half = rx*Math.sqrt(1-dy*dy);
+        for (var x = Math.ceil(cx-half-0.5); x < cx+half-0.5; x++) pixel(im,x,y,c);
     }
-    poly(im, points, c);
 }
 
 // The brush follows a curved centre line, with a pointed ivory tip and a
 // darker underside. Its lag is independent of the body, not a rigid flag.
-function tail(im, phase, seat, run, bob) {
-    var sway = Math.sin(phase * Math.PI * 2 - 0.8);
+function tail(im, rig) {
+    var sway=rig.sway, seat=rig.seat, run=rig.run, bob=rig.bob;
+    var scale=Math.cos(rig.tailYaw), front=Math.sin(rig.tailYaw);
+    var root=mix(-11,-10,seat), anchor=root*Math.cos(rig.yaw);
     var points = [], count = 25;
     for (var i = 0; i < count; i++) {
         var t = i / (count - 1);
@@ -63,7 +66,7 @@ function tail(im, phase, seat, run, bob) {
         x = mix(x, -10 - 17 * Math.sin(t * Math.PI * 0.8) + 7 * t, seat);
         y = mix(y, -16 + 4 * t + sway * 2 * t, run);
         var radius = (1.4 + 4.6 * Math.sin(Math.PI * Math.pow(t, 0.7))) * (1 - 0.8 * Math.pow(t, 8));
-        points.push({ x:x, y:y, r:radius });
+        points.push({ x:anchor+(x-root)*scale-front*6*Math.sin(t*Math.PI), y:y, r:radius });
     }
     // Cross-sections overlap; paint from root to tip, with slanting flecks at
     // the russet/ivory boundary rather than a square dipped-in-paint end.
@@ -76,37 +79,22 @@ function tail(im, phase, seat, run, bob) {
     }
 }
 
-function footAt(phase, offset, hip, moving, run) {
-    if (!moving) return [hip + 1, 0];
-    // Keep the bound's existing lift timing, but return airborne paws
-    // forward and push planted paws back, just as in the walking stride.
-    var p = (phase + offset + (run ? 0.5 : 0)) % 1;
-    var stride = run ? 22 : 16, stance = run ? 0.5 : 0.62;
-    var span = stride * stance;
-    // Match the body's horizontal travel during contact. Both gaits keep
-    // a paw on the same patch of ground, rather than pedalling or skating.
-    if (p < stance) return [hip + span / 2 - p * stride, 0];
-    var s = (p - stance) / (1 - stance);
-    return [hip - span / 2 + smooth(s) * span, -Math.sin(s * Math.PI) * (run ? 6 : 4.5)];
-}
-function limb(im, hip, foot, hind, far) {
-    var bend = hind ? -3.5 : 1.8;
+function limb(im, hip, foot, hind, far, facing) {
+    var bend = (hind ? -3.5 : 1.8) * facing;
     var knee = [mix(hip[0], foot[0], 0.48) + bend, mix(hip[1], foot[1], 0.52)];
     stroke(im, hip, knee, hind ? 4 : 2.8, far ? 3 : 5);
-    stroke(im, [hip[0]+0.4,hip[1]], [knee[0]+0.5,knee[1]-0.5], 1.1, far ? 4 : 7);
+    stroke(im, [hip[0]+0.4*facing,hip[1]], [knee[0]+0.5*facing,knee[1]-0.5], 1.1, far ? 4 : 7);
     stroke(im, knee, foot, 1.8, far ? 17 : 18);
-    stroke(im, [foot[0]-0.6,foot[1]-0.4], [foot[0]+2.2,foot[1]-0.4], 1.5, 17);
+    ellipse(im,foot[0]+0.7*facing,foot[1]-0.4,1.7,0.8,17);
     if (!far) pixel(im, knee[0], knee[1], 19);
 }
 
-function head(im, pose, phase, bob, seat) {
-    var sniff = pose === "sniff" ? (0.5 - 0.5 * Math.cos(phase * 2 * Math.PI)) : 0;
-    var lowered = 13 * sniff;
-    var angle = pose === "sniff" ? sniff * 0.38 : (pose === "alert" ? -0.10 : 0);
-    var hx = 8 + (pose === "sniff" ? 2 : 0), hy = -22 + bob + lowered - seat * 1.5;
-    var ear = pose === "alert" ? -1.4 : (phase > 0.65 && phase < 0.85 ? 1.3 : 0);
+function head(im, rig) {
+    var angle = rig.pitch, scale = Math.cos(rig.headYaw);
+    var hx = 8 + rig.dip * 2, hy = -22 + rig.bob * 0.45 + 13 * rig.dip - rig.seat * 1.5;
+    var ear = rig.ear - (rig.pitch < 0 ? 1.4 : 0);
     function point(p) {
-        return [hx + p[0] * Math.cos(angle) - p[1] * Math.sin(angle), hy + p[0] * Math.sin(angle) + p[1] * Math.cos(angle)];
+        return [(hx + p[0] * Math.cos(angle) - p[1] * Math.sin(angle)) * scale, hy + p[0] * Math.sin(angle) + p[1] * Math.cos(angle)];
     }
     function shape(points, c) { poly(im, points.map(point), c); }
     function dot(x, y, c) { var p = point([x,y]); pixel(im,p[0],p[1],c); }
@@ -128,25 +116,34 @@ function head(im, pose, phase, bob, seat) {
     // Dark almond with one restrained amber glint. Blinks close the eye;
     // they do not change the skull or flash a white cartoon eyeball.
     dot(8,-1,22); dot(9,-1,22);
-    if (!((pose === "idle" || pose === "sit") && phase > 0.81 && phase < 0.89)) dot(9,-1,23);
+    if (rig.blink < 0.4) dot(9,-1,23);
     dot(15,2,17); dot(16,2,17); dot(16,3,17);
     dot(13,4,2); dot(12,4,3);
     dot(-1,-4,20); dot(-2,1,12);
+    // Volume grows continuously as the muzzle turns towards the viewer.
+    // The side ears/skull remain underneath; no sudden front-plate swap.
+    var front = Math.abs(Math.sin(rig.headYaw)), cx = hx * scale, cy = hy - 2;
+    if (front > 0.03) {
+        var w = front * 5;
+        ellipse(im,cx,cy,w,5*front,6);
+        poly(im,[[cx-w,cy-1],[cx,cy+2],[cx+w,cy-1],[cx+w*0.7,cy+5*front],
+            [cx,cy+6*front],[cx-w*0.7,cy+5*front]],14);
+        poly(im,[[cx-w,cy-1],[cx-w-1*front,cy-11*front],[cx-1*front,cy-5*front],
+            [cx+w+1*front,cy-11*front],[cx+w,cy-1]],3);
+        stroke(im,[cx-w,cy-10*front],[cx-w+front,cy-5*front],1,20);
+        stroke(im,[cx+w,cy-10*front],[cx+w-front,cy-5*front],1,8);
+        ellipse(im,cx,cy+2*front,2.2*front,4*front,7);
+        if (front > 0.8) {
+            pixel(im,cx-2.5*front,cy+1,22); pixel(im,cx+2.5*front,cy+1,22);
+            if (rig.blink < 0.4) pixel(im,cx+2.5*front,cy+1,23);
+            pixel(im,cx,cy+5*front,17);
+        }
+    }
 }
 
-function makeSprite(pose, frame) {
-    var phase = frame / FRAMES, t = frame / (FRAMES - 1);
-    var im = new Uint8Array(WIDTH * HEIGHT);
-    var moving = pose === "walk" || pose === "run", run = pose === "run" ? 1 : 0;
-    var seat = pose === "sit" ? 1 : pose === "settle" ? smooth(t) : pose === "rise" ? 1 - smooth(t) : 0;
-    var bob = moving ? -0.65 + Math.cos(phase * Math.PI * 4) * 0.65 : Math.sin(phase * Math.PI * 2) * 0.35;
-    if (run) bob = -1.5 - Math.sin(phase * Math.PI * 2) * 1.5;
-    var hipY = mix(-16 + bob + run * Math.sin(phase * Math.PI * 2) * 2, -6, seat), shoulderY = -18 + bob;
-    var rear = footAt(phase, run ? 0.58 : 0.28, -9, moving, run);
-    var front = footAt(phase, run ? 0.12 : 0.78, 9, moving, run);
-    limb(im, [-9,hipY], rear, true, true);
-    limb(im, [8,shoulderY], front, false, true);
-    tail(im, phase, seat, run, bob);
+function paintTorso(im, rig) {
+    var seat = rig.seat, bob = rig.bob;
+    var hipY = mix(-16 + bob + rig.flex, -6, seat);
     // Long barrel, high shoulder and tucked belly, widening to the haunch.
     var outline = [[-14,hipY+2],[-13,hipY-3],[-9,hipY-5],[-3,mix(-22+bob,-18,seat)],
         [4,-22+bob],[9,-25+bob],[13,-22+bob],[13,-16+bob],[10,-10+bob],
@@ -176,71 +173,63 @@ function makeSprite(pose, frame) {
     }
     stroke(im, [-8,hipY-4], [-3,mix(-22+bob,-18,seat)], 1, 20);
     pixel(im,0,-22+bob,21); pixel(im,2,-22+bob,9);
-    // Near hind leg folds under the haunch when sitting. Front paws remain
-    // planted during the entire lowering/rising motion.
-    rear = footAt(phase, run ? 0.5 : 0.78, -9, moving, run);
-    front = footAt(phase, run ? 0 : 0.28, 9, moving, run);
-    if (seat > 0) {
-        rear[0] = mix(rear[0], -4, seat);
-        ellipse(im, -9, hipY+2, 5, 5, 5);
-        ellipse(im, -10, hipY+1, 3, 3, 6);
+}
+
+// Rasterise a coherent joint pose, not an alpha dissolve between two animals.
+// One cached plate is shared by views whenever the simulation has not advanced.
+function makeSprite(fox) {
+    var rig = fox.rig.body, feet = fox.rig.feet;
+    var im = new Uint8Array(WIDTH * HEIGHT), torso = new Uint8Array(WIDTH * HEIGHT);
+    var px = Math.round(fox.x), py = Math.round(fox.y);
+    var scale = Math.cos(rig.yaw), front = Math.abs(Math.sin(rig.yaw));
+    var hipY = mix(-16 + rig.bob + rig.flex, -6, rig.seat), shoulderY = -18 + rig.bob;
+    function foot(i) { return [feet[i].x - px, feet[i].y - py]; }
+    function hip(i) {
+        return [(i % 2 ? 9 : -9) * scale + (i < 2 ? -3 : 3) * front,
+            i % 2 ? shoulderY + (i < 2 ? 0 : 3) : hipY + (i < 2 ? 0 : 1)];
     }
-    limb(im, [-9,hipY+1], rear, true, false);
-    limb(im, [10,shoulderY+3], front, false, false);
-    // The neck follows a dipping skull; moving the head alone would leave
-    // it floating below the shoulders at the bottom of a sniff.
-    var dip = pose === "sniff" ? 0.5 - 0.5 * Math.cos(phase * Math.PI * 2) : 0;
-    poly(im, [[8,-23+bob],[13,-21+bob],[15,-16+bob+10*dip],
-        [12,-10+bob+10*dip],[9,-10+bob],[7,-16+bob]], 5);
-    poly(im, [[10,-22+bob],[13,-20+bob],[14,-15+bob+9*dip],
-        [12,-12+bob+8*dip],[10,-16+bob]], 7);
-    // The breast catches reflected fire below, silver moonlight above.
-    poly(im, [[12,-22+bob],[14,-19+bob+5*dip],[13,-14+bob+9*dip],
-        [10,-10+bob+6*dip],[9,-13+bob],[10,-17+bob]], 12);
-    poly(im, [[12,-22+bob],[14,-19+bob+5*dip],[12,-15+bob+8*dip],
-        [10,-13+bob+6*dip],[11,-18+bob]], 15);
-    head(im, pose, phase, bob, seat);
+    limb(im,hip(0),foot(0),true,true,scale);
+    limb(im,hip(1),foot(1),false,true,scale);
+    tail(im,rig);
+    paintTorso(torso,rig);
+    for (var y = 0; y < HEIGHT; y++) for (var x = 0; x < WIDTH; x++) {
+        var c = torso[y*WIDTH+x];
+        if (c) pixel(im,(x-ANCHOR_X)*scale,y-ANCHOR_Y,c);
+    }
+    if (front > 0.03) {
+        // A rounded barrel and ruff keep volume when the flank foreshortens.
+        ellipse(im,0,-15+rig.bob,7*front,9,3);
+        ellipse(im,-front,-16+rig.bob,5.5*front,8,5);
+        ellipse(im,-2*front,-18+rig.bob,3.5*front,5,7);
+        ellipse(im,8*scale,-16+rig.bob,5*front,8,12);
+        ellipse(im,8*scale-front,-18+rig.bob,3.5*front,5,15);
+    }
+    if (rig.seat > 0) {
+        ellipse(im,-9*scale,hipY+2,5,5,5);
+        ellipse(im,-10*scale,hipY+1,3,3,6);
+    }
+    limb(im,hip(2),foot(2),true,false,scale);
+    limb(im,hip(3),foot(3),false,false,scale);
+    // The neck bridges the leading head and following shoulders during a turn.
+    function neck(points, colour) {
+        poly(im,points.map(function(p) {
+            var lead = clamp((p[0]-8)/6,0,1);
+            return [p[0]*Math.cos(mix(rig.yaw,rig.headYaw,lead)),p[1]];
+        }),colour);
+    }
+    var bob=rig.bob, dip=rig.dip;
+    neck([[8,-23+bob],[13,-21+bob],[15,-16+bob+10*dip],
+        [12,-10+bob+10*dip],[9,-10+bob],[7,-16+bob]],5);
+    neck([[10,-22+bob],[13,-20+bob],[14,-15+bob+9*dip],
+        [12,-12+bob+8*dip],[10,-16+bob]],7);
+    neck([[12,-22+bob],[14,-19+bob+5*dip],[13,-14+bob+9*dip],
+        [10,-10+bob+6*dip],[9,-13+bob],[10,-17+bob]],12);
+    neck([[12,-22+bob],[14,-19+bob+5*dip],[12,-15+bob+8*dip],
+        [10,-13+bob+6*dip],[11,-18+bob]],15);
+    head(im,rig);
     return im;
 }
-var SPRITES = {};
-["idle", "walk", "sniff", "alert", "run", "sit", "settle", "rise"].forEach(function(pose) {
-    SPRITES[pose] = [];
-    for (var i = 0; i < FRAMES; i++) SPRITES[pose].push(makeSprite(pose, i));
-});
-
-// A half-turn narrows the silhouette before opening onto the opposite flank.
-// The final plate faces back relative to the current direction; the encounter
-// changes direction only once the turn finishes, so there is no mirror-pop.
-SPRITES.turn = [];
-for (var f = 0; f < FRAMES; f++) {
-    var turn = new Uint8Array(WIDTH * HEIGHT), t = f / (FRAMES - 1);
-    var scale = Math.cos(t * Math.PI), plate = SPRITES.idle[0];
-    for (var y = 0; y < HEIGHT; y++) for (var x = 0; x < WIDTH; x++) {
-        var c = plate[y * WIDTH + x];
-        if (c) pixel(turn, (x - ANCHOR_X) * scale, y - ANCHOR_Y, c);
-    }
-    // At three-quarter/front view the ruff and ears still have volume.
-    var frontness = Math.sin(t * Math.PI);
-    if (frontness > 0.4) {
-        var cx = 8 * scale, w = 5 * frontness;
-        // A real front plate supplies chest depth, two ears and separated
-        // forepaws at mid-turn, where projecting a side plate becomes paper.
-        ellipse(turn,0,-14,w+1,10,4);
-        ellipse(turn,cx*0.4,-16,w,8,6);
-        stroke(turn,[-w*0.65,-12],[-w*0.65,0],1.8,18);
-        stroke(turn,[w*0.65,-12],[w*0.65,0],1.8,18);
-        poly(turn,[[cx-w,-22],[cx+w,-22],[cx+w*0.6,-14],[cx,-10],[cx-w*0.6,-14]],12);
-        poly(turn,[[cx-w+1,-23],[cx+w-1,-23],[cx+2,-16],[cx,-13],[cx-2,-16]],15);
-        ellipse(turn,cx,-26,w+1,5,6);
-        poly(turn,[[cx-w,-25],[cx-w-1,-34],[cx-1,-29],[cx+w+1,-34],[cx+w,-25]],3);
-        stroke(turn,[cx-w,-33],[cx-w+1,-29],1,20);
-        stroke(turn,[cx+w,-33],[cx+w-1,-29],1,8);
-        poly(turn,[[cx-w,-25],[cx,-23],[cx+w,-25],[cx+3,-21],[cx,-20],[cx-3,-21]],14);
-        poly(turn,[[cx-2,-27],[cx+2,-27],[cx+2,-23],[cx,-21],[cx-2,-23]],7);
-        pixel(turn,cx-3,-26,22); pixel(turn,cx+3,-26,22); pixel(turn,cx,-22,17);
-    }
-    SPRITES.turn.push(turn);
-}
+var cachedFox = null, cachedVersion = -1, cachedPlate = null;
 
 // The foreground boulder remains untouched as the visitor enters/leaves.
 var ROCK = [[295,151],[301,145],[312,139],[327,138],[340,137],[360,137],[360,181],[326,179],[318,177],[305,175],[291,168],[288,163]];
@@ -259,18 +248,18 @@ for (var oy = 137; oy <= 181; oy++) for (var ox = 288; ox < 360; ox++)
 var bounds = [0,0,0,0];
 function draw(fb, fox, heat) {
     if (!fox || fox.x + ANCHOR_X < 0 || fox.x - ANCHOR_X >= 360) return null;
-    var frames = SPRITES[fox.pose] || SPRITES.idle;
-    var progress = fox.pose === "turn" || fox.pose === "settle" || fox.pose === "rise";
-    var phase = Math.min(FRAMES-1, Math.floor((fox.phase || 0) * (progress ? FRAMES-1 : FRAMES)));
-    var im = frames[phase], px = Math.round(fox.x), py = Math.round(fox.y);
-    var facing = fox.direction < 0 ? -1 : 1;
+    if (cachedFox !== fox || cachedVersion !== fox.rig.version) {
+        cachedPlate = makeSprite(fox);
+        cachedFox = fox; cachedVersion = fox.rig.version;
+    }
+    var im = cachedPlate, px = Math.round(fox.x), py = Math.round(fox.y);
     var fireDx = fox.x - 180, fireDy = fox.y - 182;
     var warmth = clamp((heat === undefined ? 0.68 : heat) * 1.4, 0, 1)
         * clamp(1 - Math.sqrt(fireDx * fireDx + fireDy * fireDy) / 175, 0, 1);
     var fireSide = fireDx < 0 ? -1 : 1;
     var behindBoulder = fox.y <= 182;
     var flicker = 0.96 + 0.04 * Math.sin((fox.age || 0) * 9.7);
-    var shadowWidth = fox.pose === "sit" ? 15 : 22;
+    var shadowWidth = Math.round(mix(22,15,fox.rig.body.seat));
     for (var sy = -2; sy <= 2; sy++) for (var sx = -shadowWidth; sx <= shadowWidth; sx++) {
         var xx = px + sx, yy = py + sy;
         if (xx < 0 || xx >= 360 || yy < 0 || yy >= 240 || (behindBoulder && OCCLUSION[yy * 360 + xx])) continue;
@@ -281,7 +270,7 @@ function draw(fb, fox, heat) {
     for (var y = 0; y < HEIGHT; y++) for (var x = 0; x < WIDTH; x++) {
         var c = im[y * WIDTH + x];
         if (!c) continue;
-        var dx = px + (x - ANCHOR_X) * facing, dy = py + y - ANCHOR_Y;
+        var dx = px + x - ANCHOR_X, dy = py + y - ANCHOR_Y;
         if (dx < 0 || dx >= 360 || dy < 0 || dy >= 240 || (behindBoulder && OCCLUSION[dy * 360 + dx])) continue;
         // Light stays on the hearth-facing side, on either side of camp.
         var light = warmth * flicker * (0.78 + 0.22 * clamp(((px-dx)*fireSide+24)/48,0,1));
@@ -296,5 +285,5 @@ function draw(fb, fox, heat) {
     return bounds;
 }
 if (typeof module !== "undefined" && module.exports) {
-    module.exports = { draw:draw, SPRITES:SPRITES, COLOURS:COLOURS, WIDTH:WIDTH, HEIGHT:HEIGHT };
+    module.exports = { draw:draw, makeSprite:makeSprite, COLOURS:COLOURS, WIDTH:WIDTH, HEIGHT:HEIGHT };
 }
