@@ -72,7 +72,7 @@ function qmlProblems(output) {
   return output.split("\n").filter(l => /\b(WARN|ERROR)\b/.test(l) && /qml|\.qml|omafire/i.test(l));
 }
 
-for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshell on ${host.name}`, { skip, timeout: 120000 }, async () => {
+for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshell on ${host.name}`, { skip, timeout: 120000 }, async (t) => {
   assemble(host.name);
   fs.rmSync(path.join(DIR, "panel.json"), { force: true });
   // A save from 100 s ago at full fuel.
@@ -131,6 +131,33 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
     assert.equal(saved.version, 1);
     assert.ok(Math.abs(saved.fuel - st.fuel) < 0.01, "actions are saved");
     assert.ok(Math.abs(saved.savedAt - Date.now()) < 5000);
+
+    ipc("wesleygrimes.omafire", "sound");
+    st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
+    await t.test("background audio stops only when the last bar widget is destroyed", {
+      skip: !st.sound && "QtMultimedia or an audio output is unavailable",
+    }, () => {
+      assert.equal(st.audioPlaying, true, "closed popup plays in background mode");
+      ipc("omafire-harness", "removeBar", 0);
+      assert.equal(ipc("omafire-harness", "widgets"), "1");
+      assert.equal(JSON.parse(ipc("wesleygrimes.omafire", "status")).audioPlaying, true,
+        "removing one monitor must not silence the remaining widget");
+
+      ipc("omafire-harness", "removeBar", 1);
+      assert.equal(ipc("omafire-harness", "widgets"), "0");
+      st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
+      assert.equal(st.sound, false, "last widget removal mutes sound");
+      assert.equal(st.audioPlaying, false);
+      assert.equal(st.backgroundSound, true, "shutdown keeps the saved preference");
+
+      ipc("omafire-harness", "restoreBar", 1);
+      st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
+      assert.equal(st.sound, false, "re-enabling must not resume audio automatically");
+      ipc("wesleygrimes.omafire", "sound");
+      assert.equal(JSON.parse(ipc("wesleygrimes.omafire", "status")).audioPlaying, true,
+        "sound can be explicitly restarted after the widget returns");
+      ipc("wesleygrimes.omafire", "sound");
+    });
   } finally {
     await qs.stop();
   }

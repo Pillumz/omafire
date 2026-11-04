@@ -8,8 +8,8 @@ import "fire.js" as Fire
 QtObject {
     id: root
 
-    // Set by the host: whether the popup is showing (particles, 60 Hz
-    // stepping, and sound only run while it is).
+    // Set by the host: whether the popup is showing. Particles and 60 Hz
+    // stepping only run while open; audio can also use background mode.
     property bool open: false
     property bool reducedMotion: false
     // Tests turn this off and step with advance().
