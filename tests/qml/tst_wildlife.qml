@@ -24,14 +24,16 @@ Item {
             tryVerify(function() { return sceneA.framesDrawn >= a + 3 && sceneB.framesDrawn >= b + 3; }, 5000);
             wait(50);
         }
+        property string captureSuffix: ""
         function advanceUntilPose(pose) {
-            for (var i = 0; i < 1200; i++) {
+            for (var i = 0; i < 10800; i++) {
                 if (fire.wildlife.fox && fire.wildlife.fox.pose === pose) return;
                 Wildlife.advance(fire.wildlife, 1 / 60);
             }
             fail("visitor did not reach " + pose);
         }
-        function visit() {
+        function visit(seed) {
+            fire.wildlife = Wildlife.create(seed === undefined ? 1 : seed);
             Wildlife.startVisit(fire.wildlife);
             advanceUntilPose("idle");
             fire.sync();
@@ -40,7 +42,7 @@ Item {
         function grab(scene, name) {
             var done = false;
             scene.grabToImage(function(result) {
-                result.saveToFile(Qt.resolvedUrl("../out/wildlife-" + name + "-" + Screen.devicePixelRatio + "x.png").toString().replace(/^file:\/\//, ""));
+                result.saveToFile(Qt.resolvedUrl("../out/wildlife-" + name + captureSuffix + "-" + Screen.devicePixelRatio + "x.png").toString().replace(/^file:\/\//, ""));
                 done = true;
             });
             tryVerify(function() { return done; }, 5000);
@@ -48,15 +50,19 @@ Item {
         function initTestCase() {
             tryVerify(function() { return sceneA.ready && sceneB.ready; }, 10000);
         }
-        function test_shared_click_and_clean_departure() {
+        function test_shared_click_and_clean_departure_data() {
+            return [{ tag: "rock", seed: 1 }, { tag: "right-trail", seed: 6 }, { tag: "left-trail", seed: 8 }];
+        }
+        function test_shared_click_and_clean_departure(data) {
+            captureSuffix = "-" + data.tag;
             nextFrames();
             grab(sceneA, "before");
             var fullFrames = sceneA.fullFramesDrawn;
             var fuel = fire.fuel;
-            visit();
+            visit(data.seed);
             grab(sceneA, "arrived-A");
             grab(sceneB, "arrived-B");
-            mouseClick(sceneA, 120, 230);
+            mouseClick(sceneA, 120, 80);
             compare(fire.wildlife.fox.pose, "idle", "unrelated clicks do not scare the fox");
             var facing = fire.wildlife.fox.direction;
             mouseClick(sceneB, fire.wildlife.fox.x, fire.wildlife.fox.y - 12);
@@ -66,11 +72,11 @@ Item {
             advanceUntilPose("turn");
             compare(fire.wildlife.fox.direction, facing, "turn retains facing until complete");
             advanceUntilPose("run");
-            compare(fire.wildlife.fox.direction, 1, "completed turn faces cover");
+            compare(fire.wildlife.fox.direction, -facing, "completed turn faces the nearby exit, on either side of camp");
             nextFrames();
             grab(sceneA, "run-A");
             grab(sceneB, "run-B");
-            for (var i = 0; i < 50; i++) {
+            for (var i = 0; i < 120 && fire.wildlife.fox; i++) {
                 var fox = fire.wildlife.fox;
                 if (fox) fire.pointerDown(fox.x, fox.y - 12);
                 Wildlife.advance(fire.wildlife, 0.1);

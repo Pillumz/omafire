@@ -103,15 +103,20 @@ views with a shared fire and visitor:
 app-sandbox launch -- bash scripts/preview-fox
 ```
 
-The preview-only toolbar can play a visit immediately, inspect listening,
-sniffing, resting and turning, startle it, or pause/resume. Click near the fox in
-either scene to exercise real input. Production has no extra buttons or forced
+The preview-only toolbar can replay a seeded visit immediately, choose the
+next fox, inspect listening/sniffing/resting/turning, startle it, or pause/resume.
+Not every visit includes every pose (a passing fox need not sit). IPC `seed(n)`
+selects a repeatable visit: 1 lingers from the rocks, 2 crosses from the rocks
+to the left trail, 6 enters from the right trail, and 8 forages from the left.
+`pose(name)` finds the first occurrence; `inspectAt(seconds)` freezes any time.
+Click near the fox in either scene to exercise real input. Production has no extra buttons or forced
 visits.
 
 For a repeatable motion capture, create a guest directory, then call the
 fixture's `record(directory, seconds, spookAt)` IPC method. `spookAt = -1`
-records an undisturbed visit; `16` startles the resting fox. Frames are numbered
-PNGs at 20 fps, captured from the actual scene. `recording()` reports completion.
+records an undisturbed visit; a nonnegative value clicks near the fox at that
+visit time. For a seated startle, use `pose("sit")` followed by `spook()` on seed 1.
+Frames are numbered PNGs at 20 fps, captured from the actual scene. `recording()` reports completion.
 Select the fixture with `qs ipc -p /tmp/omafire-fox.*/shell.qml`; use
 `app-sandbox fetch` to export the resulting images or an encoded video. The
 capture size follows the guest device scale, so inspect its actual dimensions

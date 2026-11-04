@@ -84,15 +84,17 @@ for (const scale of [1, 2]) {
     // tst_wildlife.qml holds the fire clock still while a shared fox visits
     // and runs away. Compare real scene grabs (QtTest's grabImage truncates
     // to logical size at 2x) rather than locking a particular sprite design.
-    const wildlife = name => readRGBA(path.join(OUT, `wildlife-${name}-${scale}x.png`));
-    const samePixels = (a, b) => a.width === b.width && a.height === b.height
-      && Buffer.from(a.data).equals(Buffer.from(b.data));
-    const beforeFox = wildlife("before"), arrivedFox = wildlife("arrived-A");
-    assert.equal(beforeFox.width, 360 * scale);
-    assert.ok(!samePixels(beforeFox, arrivedFox), "a fox really appears in the scene");
-    assert.ok(samePixels(arrivedFox, wildlife("arrived-B")), "the same visitor appears in both views");
-    assert.ok(samePixels(wildlife("run-A"), wildlife("run-B")), "clicking one view startles both");
-    assert.ok(samePixels(beforeFox, wildlife("departed")), "departing restores all sprite and shadow pixels without trails");
+    for (const entrance of ["rock", "right-trail", "left-trail"]) {
+      const wildlife = name => readRGBA(path.join(OUT, `wildlife-${name}-${entrance}-${scale}x.png`));
+      const samePixels = (a, b) => a.width === b.width && a.height === b.height
+        && Buffer.from(a.data).equals(Buffer.from(b.data));
+      const beforeFox = wildlife("before"), arrivedFox = wildlife("arrived-A");
+      assert.equal(beforeFox.width, 360 * scale);
+      assert.ok(!samePixels(beforeFox, arrivedFox), "a fox really appears in the scene");
+      assert.ok(samePixels(arrivedFox, wildlife("arrived-B")), "the same visitor appears in both views");
+      assert.ok(samePixels(wildlife("run-A"), wildlife("run-B")), "clicking one view startles both");
+      assert.ok(samePixels(beforeFox, wildlife("departed")), `${entrance}: departing restores all sprite and shadow pixels without trails`);
+    }
 
     // tst_lifecycle.qml: after the window hides and shows, the scene moves
     // window, or the canvas is rebuilt around the same fire, every pixel of

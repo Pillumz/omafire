@@ -256,19 +256,22 @@ for (var oy = 137; oy <= 181; oy++) for (var ox = 288; ox < 360; ox++)
     if (behindRock(ox + 0.5, oy + 0.5)) OCCLUSION[oy * 360 + ox] = 1;
 var bounds = [0,0,0,0];
 function draw(fb, fox, heat) {
-    if (!fox) return null;
+    if (!fox || fox.x + ANCHOR_X < 0 || fox.x - ANCHOR_X >= 360) return null;
     var frames = SPRITES[fox.pose] || SPRITES.idle;
     var progress = fox.pose === "turn" || fox.pose === "settle" || fox.pose === "rise";
     var phase = Math.min(FRAMES-1, Math.floor((fox.phase || 0) * (progress ? FRAMES-1 : FRAMES)));
     var im = frames[phase], px = Math.round(fox.x), py = Math.round(fox.y);
     var facing = fox.direction < 0 ? -1 : 1;
+    var fireDx = fox.x - 180, fireDy = fox.y - 182;
     var warmth = clamp((heat === undefined ? 0.68 : heat) * 1.4, 0, 1)
-        * clamp(1 - (fox.x - 255) / 100, 0, 1);
+        * clamp(1 - Math.sqrt(fireDx * fireDx + fireDy * fireDy) / 175, 0, 1);
+    var fireSide = fireDx < 0 ? -1 : 1;
+    var behindBoulder = fox.y <= 182;
     var flicker = 0.96 + 0.04 * Math.sin((fox.age || 0) * 9.7);
     var shadowWidth = fox.pose === "sit" ? 15 : 22;
     for (var sy = -2; sy <= 2; sy++) for (var sx = -shadowWidth; sx <= shadowWidth; sx++) {
         var xx = px + sx, yy = py + sy;
-        if (xx < 0 || xx >= 360 || yy < 0 || yy >= 240 || OCCLUSION[yy * 360 + xx]) continue;
+        if (xx < 0 || xx >= 360 || yy < 0 || yy >= 240 || (behindBoulder && OCCLUSION[yy * 360 + xx])) continue;
         var a = Math.max(0, 1 - sx*sx/(shadowWidth*shadowWidth) - sy*sy/8) * 0.27;
         var idx = (yy * 360 + xx) * 4;
         fb[idx] *= 1-a; fb[idx+1] *= 1-a; fb[idx+2] *= 1-a;
@@ -277,9 +280,9 @@ function draw(fb, fox, heat) {
         var c = im[y * WIDTH + x];
         if (!c) continue;
         var dx = px + (x - ANCHOR_X) * facing, dy = py + y - ANCHOR_Y;
-        if (dx < 0 || dx >= 360 || dy < 0 || dy >= 240 || OCCLUSION[dy * 360 + dx]) continue;
-        // Fire comes from the left in world space, even after the fox turns.
-        var light = warmth * flicker * (0.78 + 0.22 * clamp((px-dx+24)/48,0,1));
+        if (dx < 0 || dx >= 360 || dy < 0 || dy >= 240 || (behindBoulder && OCCLUSION[dy * 360 + dx])) continue;
+        // Light stays on the hearth-facing side, on either side of camp.
+        var light = warmth * flicker * (0.78 + 0.22 * clamp(((px-dx)*fireSide+24)/48,0,1));
         var col = COLOURS[c], i = (dy * 360 + dx) * 4;
         fb[i] = col[0] * (0.67 + 0.33 * light);
         fb[i+1] = col[1] * (0.79 + 0.21 * light);
