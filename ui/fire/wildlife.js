@@ -28,6 +28,7 @@ var STAGES = {
     rise: { pose: "rise", duration: 0.7, next: "turn" },
     turn: { pose: "turn", duration: 0.65, next: "retreat" },
     retreat: { pose: "walk", duration: 8 },
+    escapeRise: { pose: "rise", duration: 0.25, next: "startle" },
     startle: { pose: "alert", duration: 0.22, next: "escapeTurn" },
     escapeTurn: { pose: "turn", duration: 0.3, next: "run" },
     run: { pose: "run" }
@@ -62,7 +63,16 @@ function spook(state, x, y) {
     if (!(dx * dx + dy * dy <= 24 * 24)) return false;
     if (!fox.fleeing) {
         fox.fleeing = true;
-        enterStage(fox, "startle");
+        var seat = fox.pose === "sit" ? 1 : fox.pose === "settle" ? fox.phase
+            : fox.pose === "rise" ? 1 - fox.phase : 0;
+        var turnProgress = fox.pose === "turn" ? fox.phase : -1;
+        enterStage(fox, seat > 0 ? "escapeRise" : turnProgress >= 0 ? "escapeTurn" : "startle");
+        fox.startSeat = seat;
+        if (seat > 0) fox.phase = 1 - seat;
+        if (turnProgress >= 0) {
+            fox.poseAge = turnProgress * STAGES.escapeTurn.duration;
+            fox.phase = turnProgress;
+        }
     }
     return true;
 }
@@ -118,7 +128,8 @@ function advance(state, dt) {
         fox.phase = fox.pose === "walk" || fox.pose === "run"
             ? (fox.distance / (fox.pose === "run" ? 22 : 16)) % 1
             : fox.pose === "turn" || fox.pose === "settle" || fox.pose === "rise"
-            ? progress : (fox.poseAge / (fox.pose === "sniff" ? 1.2 : 2.4)) % 1;
+            ? (stage === "escapeRise" ? 1 - fox.startSeat * (1 - progress) : progress)
+            : fox.pose === "sniff" ? (progress * 2) % 1 : (fox.poseAge / 2.4) % 1;
         dt -= step;
         if (fox.poseAge < duration) break;
         if (stage === "retreat" || stage === "run") {
