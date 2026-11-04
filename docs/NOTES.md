@@ -182,6 +182,33 @@ and 20 fps paint timer. There is no full-window occlusion detection or video
 player. Sound policy is unchanged: wallpaper visibility does not itself start
 sound or bypass the saved background-sound preference.
 
+## Widescreen verification (2026-11-04)
+
+The actual installed plugin was exercised in an app-sandbox Omarchy VM at
+3840x2160, scale 1.6. The complete original scene is visible, including the
+foreground, upper sky, woodpile and visiting fox. Native-size crops were checked
+for side joins and matching pixel density. The popup retains its original 3:2
+composition and shared fire. A missed desktop log drop left fuel unchanged
+apart from normal burn-down; a hearth drop added 0.25 fuel. Double-clicks in
+both added side strips did not open the wallpaper picker.
+
+The desktop was also captured at 2880x1920 (3:2) and 3840x1920 (2:1), scale 1.6;
+both retained the original scene, and a log drop at the resized 3:2 coordinates
+added fuel. All 52 standard checks passed in the guest, with no skips, including
+unchanged fire pixels, shared wildlife interaction and popup lifecycle checks.
+The artwork package check also verifies the wide asset's center against the
+original decoded pixels. No rendering buffers or animation code changed.
+
+Before — centered crop loses sky and foreground:
+
+![Original 16:9 crop](screenshots/widescreen-before.webp)
+
+After — full original scene with extended woodland sides and live fox:
+
+![Extended 16:9 campsite](screenshots/widescreen-after.webp)
+
+These are disposable-VM captures, not screenshots of the owner's live desktop.
+
 ## CPU and memory (measured)
 
 `node scripts/measure.js 20` on an AMD Ryzen 7 6800U, Hyprland HEADLESS-1 at scale 2, standalone Quickshell process with the popup and icon in their own windows:
