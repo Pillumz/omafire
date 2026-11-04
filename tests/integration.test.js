@@ -134,7 +134,7 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
 
     ipc("wesleygrimes.omafire", "sound");
     st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
-    await t.test("background audio stops only when the last bar widget is destroyed", {
+    await t.test("background audio stops when the last widget or wallpaper disappears", {
       skip: !st.sound && "QtMultimedia or an audio output is unavailable",
     }, () => {
       assert.equal(st.audioPlaying, true, "closed popup plays in background mode");
@@ -156,7 +156,14 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
       ipc("wesleygrimes.omafire", "sound");
       assert.equal(JSON.parse(ipc("wesleygrimes.omafire", "status")).audioPlaying, true,
         "sound can be explicitly restarted after the widget returns");
-      ipc("wesleygrimes.omafire", "sound");
+      ipc("omafire-harness", "wallpaper", true);
+      ipc("omafire-harness", "removeBar", 1);
+      assert.equal(JSON.parse(ipc("wesleygrimes.omafire", "status")).audioPlaying, true,
+        "wallpaper keeps the shared audio alive without a bar widget");
+      ipc("omafire-harness", "wallpaper", false);
+      st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
+      assert.equal(st.sound, false, "removing the last wallpaper also resets sound");
+      assert.equal(st.audioPlaying, false, "no audio remains after the last view disappears");
     });
   } finally {
     await qs.stop();

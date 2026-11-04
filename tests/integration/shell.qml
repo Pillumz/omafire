@@ -26,6 +26,7 @@ ShellRoot {
             return s.owner === barA ? "A" : s.owner === barB ? "B" : "";
         }
         function widgets(): int { return OmaFire.FireSession.widgets.length; }
+        function wallpaper(active: bool): void { OmaFire.FireSession.wallpaperActive = active; }
         function removeBar(index: int): void { (index === 0 ? loaderA : loaderB).active = false; }
         function restoreBar(index: int): void { (index === 0 ? loaderA : loaderB).active = true; }
         function sameFire(): bool { return barA.session.fire === barB.session.fire; }

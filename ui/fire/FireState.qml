@@ -8,9 +8,11 @@ import "fire.js" as Fire
 QtObject {
     id: root
 
-    // Set by the host: whether the popup is showing. Particles and 60 Hz
-    // stepping only run while open; audio can also use background mode.
+    // The popup and wallpaper share one simulation. Background sound remains
+    // a separate opt-in; a visible wallpaper does not silently enable audio.
     property bool open: false
+    property bool wallpaper: false
+    readonly property bool animating: open || wallpaper
     property bool reducedMotion: false
     // Tests turn this off and step with advance().
     property bool autoTick: true
@@ -42,7 +44,7 @@ QtObject {
 
     property int statusIndex: -1
 
-    // Runs at 60 Hz while open, so it allocates nothing on the common path.
+    // Runs at 60 Hz while a scene is visible, allocating nothing on this path.
     function sync() {
         fuel = sim.fuel;
         heat = sim.heat;
@@ -66,20 +68,20 @@ QtObject {
         }
     }
 
-    // Wall-clock step. The popup steps particles; a closed popup or a long
-    // gap (suspend) only moves fuel, heat and boost forward analytically.
+    // Step particles while either view needs them. Long gaps (suspend)
+    // still move fuel, heat and boost forward analytically.
     function step() {
         if (!autoTick) return;
         var now = Date.now();
         var dt = (now - lastWall) / 1000;
         lastWall = now;
-        if (dt > 0) Fire.tick(sim, dt, open);
+        if (dt > 0) Fire.tick(sim, dt, animating);
         sync();
     }
 
     // Test hook: advance by a fixed amount.
     function advance(seconds, particles) {
-        Fire.tick(sim, seconds, particles === undefined ? open : particles);
+        Fire.tick(sim, seconds, particles === undefined ? animating : particles);
         lastWall = Date.now();
         sync();
     }
@@ -121,7 +123,7 @@ QtObject {
     }
 
     function statusJson() {
-        return JSON.stringify({ fuel: sim.fuel, heat: sim.heat, boost: sim.boost, status: Fire.status(sim).label, open: open, sound: sound, backgroundSound: backgroundSound, audioPlaying: audioPlaying });
+        return JSON.stringify({ fuel: sim.fuel, heat: sim.heat, boost: sim.boost, status: Fire.status(sim).label, open: open, wallpaper: wallpaper, sound: sound, backgroundSound: backgroundSound, audioPlaying: audioPlaying });
     }
 
     // ------------------------------------------------------------------ sound
@@ -160,23 +162,23 @@ QtObject {
         if (audioObject) { audioObject.stopNow(); audioObject.destroy(); audioObject = null; }
     }
 
-    // One timer: 60 Hz while open (the reference steps every animation
-    // frame), once a second while closed.
+    // One simulation timer, regardless of the number of views.
     property Timer driver: Timer {
         running: root.autoTick
         repeat: true
-        interval: root.open ? 16 : 1000
+        interval: root.animating ? 16 : 1000
         onTriggered: root.step()
     }
 
-    onOpenChanged: {
+    onOpenChanged: if (!open) pointerCancel()
+    onAnimatingChanged: {
         // Bank the time up to now under the previous mode, then switch.
-        var wasOpen = !open;
+        var wasAnimating = !animating;
         var now = Date.now();
         var dt = (now - lastWall) / 1000;
         lastWall = now;
-        if (dt > 0) Fire.tick(sim, dt, wasOpen);
-        if (!open) Fire.pointerCancel(sim);
+        if (dt > 0) Fire.tick(sim, dt, wasAnimating);
+        if (!animating) Fire.pointerCancel(sim);
         sync();
     }
 

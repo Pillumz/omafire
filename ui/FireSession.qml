@@ -31,9 +31,12 @@ Singleton {
     property var widgets: []
     property var owner: null
     readonly property bool isOpen: owner !== null
+    property bool wallpaperActive: false
+    onWallpaperActiveChanged: if (!wallpaperActive && widgets.length === 0) fire.shutdown()
 
     property FireState fire: FireState {
         open: session.isOpen
+        wallpaper: session.wallpaperActive
         // Omarchy 4.0.x has no Style.reduceMotion; read it as false there.
         reducedMotion: Style.reduceMotion === true
     }
@@ -46,7 +49,7 @@ Singleton {
         if (owner === widget) owner = null;
         // The singleton outlives disabled/removed widgets. Stop audio only
         // after the last monitor loses its widget, not on every unregister.
-        if (widgets.length === 0) fire.shutdown();
+        if (widgets.length === 0 && !wallpaperActive) fire.shutdown();
     }
 
     // The widget on the focused output, else the first one.

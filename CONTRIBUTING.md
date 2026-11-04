@@ -79,11 +79,16 @@ Turn sound and **Keep sound when closed** on, close the popup, and check
 `omarchy-shell wesleygrimes.omafire status` and the guest sink's monitor.
 Verify that **Sound off** silences it, disabling background sound restores
 close-to-mute behavior, and restarting the guest shell keeps the preference
-but starts muted. The popup should still stop animating while closed.
+but starts muted. The popup should still stop animating while closed. With an enabled wallpaper theme,
+the desktop keeps animating from the same fire. Verify a successful desktop log
+drop increases fuel, an off-target drop does not, and switching away from the
+theme removes the live layer. Check the woodpile and fire at more than one
+screen shape; the desktop uses aspect-preserving center crop.
 
 Keep these rules from [docs/NOTES.md](docs/NOTES.md):
 
-- No network, no web view, no background service.
+- No network, no web view, no extra background process. Wallpaper mode is an
+  in-process shell service plugin, not a systemd service.
 - Don't edit `assets/campsite-approved.webp`. The tests check its hash.
 - Rendering changes need before and after screenshots in the PR.
 

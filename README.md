@@ -1,6 +1,6 @@
 # OmaFire
 
-This fork of [Wes Grimes's OmaFire](https://github.com/wesleygrimes/omafire) adds optional background ambience: sound can keep playing when the popup is closed. The original quiet-by-default behavior is unchanged.
+This fork of [Wes Grimes's OmaFire](https://github.com/wesleygrimes/omafire) adds an interactive desktop wallpaper sharing the widget's live fire, plus optional background ambience when the popup is closed. The original quiet-by-default behavior is unchanged.
 
 A tiny campfire for your Omarchy bar.
 
@@ -22,7 +22,7 @@ That's the whole install. The fire is in the right side of your bar.
 - **Stoke it.** **Stoke** makes it flare up for a bit. It doesn't add wood, so stoking an empty fire pit just gets you a polite note.
 - **Poke the coals.** Click the coals for a shower of sparks. Very satisfying, no practical value.
 - **Listen to it.** **Sound on** plays the fire. It follows the fire: a low fire is soft embers, a steady one crackles, a hot or stoked one roars, and adding a log or stoking has its own sound. With the sound on, crickets chirp in short phrases from off in the trees, and a frog calls now and then. Both stay soft, as if they were across the water.
-- **Keep the ambience.** Turn **Keep sound when closed** on to let the fire, crickets and frogs keep playing after you close the popup. Turn **Sound off** to silence everything. Background sound defaults to off; its preference is remembered, but sound itself always starts off after a shell restart or login. Closing the popup still stops the scene animation.
+- **Keep the ambience.** Turn **Keep sound when closed** on to let the fire, crickets and frogs keep playing after you close the popup. Turn **Sound off** to silence everything. Background sound defaults to off; its preference is remembered, but sound itself always starts off after a shell restart or login. Closing the popup stops its scene animation; an active live wallpaper keeps animating.
 - **Leave it alone.** A full load burns for about 13 minutes, down to glowing embers, then coals, then rest. It keeps burning while the popup is closed, and after a restart or a suspend it picks up where it would have been.
 
 The bar icon is a little pixel fire that follows along, so you can tell at a glance whether it needs a log. Hover it for the status.
@@ -43,7 +43,7 @@ omarchy-shell wesleygrimes.omafire addLog
 omarchy-shell wesleygrimes.omafire status
 ```
 
-The functions are `toggle`, `open`, `close`, `addLog`, `stoke`, `poke`, `sound`, `backgroundSound`, and `status`. `sound` toggles playback; `backgroundSound` toggles whether sound may continue with the popup closed. `status` prints JSON with fuel, heat, boost, status, open, sound, backgroundSound, and audioPlaying.
+The functions are `toggle`, `open`, `close`, `addLog`, `stoke`, `poke`, `sound`, `backgroundSound`, and `status`. `sound` toggles playback; `backgroundSound` toggles whether sound may continue with the popup closed. `status` prints JSON with fuel, heat, boost, status, open, wallpaper, sound, backgroundSound, and audioPlaying.
 
 To open it from the keyboard, add a binding to `~/.config/hypr/bindings.lua`:
 
@@ -52,6 +52,40 @@ o.bind("SUPER + ALT + O", "OmaFire", "omarchy-shell wesleygrimes.omafire toggle"
 ```
 
 `SUPER + ALT + O` is free on a stock Omarchy 4 install. Check `omarchy-menu-keybindings --print` if you've moved things around.
+
+## Interactive desktop wallpaper
+
+![The desktop and popup sharing one live campfire](docs/screenshots/wallpaper.webp)
+
+Install the [Campfire theme](https://github.com/Pillumz/omarchy-campfire-theme)
+alongside this plugin. With that theme selected, the desktop and popup show the
+same live fire: wood added in either view feeds both, and the fire really burns
+down and goes out unless you tend it.
+
+On the exposed desktop, drag a log from the woodpile onto the fire, or click the
+coals for sparks. Normal windows stay above it and it never takes keyboard focus.
+Clicks outside the woodpile and coals reach Omarchy's desktop controls as usual;
+those controls are not available inside the two interactive areas.
+
+The scene fills each screen without stretching, cropping equally at opposite
+edges. Wide or tall screens may crop useful parts of the artwork. There are no
+desktop buttons or extra shortcuts: use the widget for stoking and sound. Audio
+remains off at login; **Keep sound when closed** controls whether it continues
+when only the wallpaper is showing.
+
+Switching to another theme removes the live layer and reveals the normal
+wallpaper. No changes to Omarchy or Hyprland, no video player, and no additional
+process. Desktop mode uses the current Omarchy 4.5 theme staging layout; the
+widget still supports Omarchy 4.0.
+
+For other themes, a file named `omafire-wallpaper` containing `enabled` in the
+theme root opts into the same scene. Without the plugin, themes retain their
+ordinary still wallpaper.
+
+The animation currently runs even behind covering windows. It keeps the existing
+360 by 240 pixel buffer and 20 fps drawing rate; opening the popup or adding
+monitors adds another view, not another simulation. It does not guarantee that
+different screens present the same frame at exactly the same instant.
 
 ## Requirements
 
@@ -62,7 +96,7 @@ o.bind("SUPER + ALT + O", "OmaFire", "omarchy-shell wesleygrimes.omafire toggle"
 
 Install either with `sudo pacman -S qt6-imageformats qt6-multimedia` if they're missing.
 
-No network access, no web view, no background service. It's plain QML and JavaScript running inside the shell you already have.
+No network access, no web view, no extra background process. It's plain QML and JavaScript running inside the shell you already have.
 
 ### If it doesn't show up
 
@@ -109,7 +143,7 @@ Remove a manual install with `omarchy plugin disable wesleygrimes.omafire`, then
 
 The fire started life as a small browser prototype. OmaFire ports its drawing code into QML: the same noise, palette, sparks, smoke, light, and timing, drawn into a 360 by 240 pixel buffer and scaled up without smoothing so it stays crisp on HiDPI screens. The lake adds gently rippling moonlight and silver-blue glints. The tests check that the fire produces the same pixels as the original, frame for frame, and that the lake animation stays on the water.
 
-It only draws while the popup is open, and then only the parts of the picture that changed. With the popup closed the cost is the bar icon, which is about 1% of one core on my VM. With it open it's roughly a fifth of one core, which is about what a small animated campfire should cost you.
+Each view draws only while active, and copies only the parts of the picture that changed. Without a live wallpaper, it only draws while the popup is open. With the popup closed the cost is the bar icon, which is about 1% of one core on my VM. With it open it's roughly a fifth of one core, which is about what a small animated campfire should cost you.
 
 State lives in `~/.local/state/omafire/state.json` (or under `$XDG_STATE_HOME`). Sound is never saved. The background-sound preference is remembered in `panel.json` beside that file. Drag the lower-left corner to resize the panel; its width is remembered there too, and the next open uses it. The scene stays 3:2.
 
