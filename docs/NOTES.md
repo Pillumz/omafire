@@ -15,8 +15,9 @@ ui/fire/                 plain QtQuick, no qs.* imports (renders standalone)
   panel.js               popup width, 3:2 height, corner-drag projection
   sound.js               fire layer gains from heat and boost
   night.js               cricket and frog scheduling
-  wildlife.js            shared fox encounter timing, route, poses and startle
-  fox.js                 hand-pixelled sprites, contact shadow and rock occlusion
+  wildlife.js            shared fox encounters, safe-link travel and startle
+  fox-rig.js             continuous anatomy, planted paws and pose transitions
+  fox.js                 pixel rasterization, contact shadow and rock occlusion
   FireState.qml          bindable wrapper around fire.js state, timers, sound toggle
   FirePopup.qml          header, scene, footer, keys
   FireScene.qml          Canvas, pointer input, toast
@@ -96,47 +97,95 @@ visits avoid repeating the same entrance. Scent investigations can double back;
 only lingering visits sit, for 5–12 seconds. Pace, listening pauses, sniff counts
 and exits vary. Wary visits return to their entrance; others usually leave by
 a different route. Planning consumes the private RNG once per visit, not once
-per frame. Travel is eased and paw phase follows distance in both axes.
+per frame.
+
+Travel accelerates, cruises and brakes along the original safe links. Connected
+same-facing links carry speed through waypoints, with a modest speed dip at
+bends; an actual pause or facing reversal brakes to rest. Short links use
+triangular speed profiles. Routes do not cut corners or gain new shortcuts.
+Walking peaks at three quarters of the planned pace, with 28 px/s² acceleration;
+escape peaks at 28.8 px/s with 48 px/s² acceleration. Movement timing changes
+without changing visit intentions, route choices or the private random stream.
 
 A scene click within 24 px of the body startles it. Escape chooses the shortest
 connected route to cover, including either end of a partially walked segment,
-never cutting through the hearth. A seated fox first rises, anticipates for
-0.22 s, turns if necessary (0.3 s), and accelerates to 28.8 px/s. Interrupted
-turns continue or reverse from the current angle. Repeated clicks cannot delay
-escape. Fire controls and unrelated scene clicks do not startle it.
+never cutting through the hearth. A seated fox rises from its current crouch
+before escaping. Listening foxes anticipate for 0.22 s; necessary turns take
+0.3 s. Interrupted turns continue or reverse from their visible angle rather
+than replacing the pose. Repeated clicks cannot delay escape. Fire controls
+and unrelated scene clicks do not startle it.
 
-The artwork in `fox.js` is articulated pixel polygons, compiled into sixteen
-80×44 palette-indexed plates per pose at module load (about 495 KiB of ink
-indices across nine poses). Slender jointed legs, a layered brush tail, tapered
-muzzle, ivory cheek and ruff, guard hairs and a broken moonlit ridge give the
-silhouette and coat definition. Walking feet follow distance with a planted
-stance and lifted return; running uses paired bounds and a flexing back.
-Sniffing bends the neck as well as the head. Settling, rising and turning use
-nonlooping progress, with a front-facing chest/head plate during a turn.
+`fox-rig.js` maintains continuous joint positions rather than selecting
+independent sprite frames. Walking uses four staggered steps over a 16 px
+stride; running uses paired 22 px bounds and a flexing back. A planted paw
+keeps both world coordinates fixed, including on diagonal trails. Recovery
+lifts the foot and aims along the upcoming safe links, not past a bend or stop.
+The final landing completes as the body stops. During a turn, diagonal pairs
+trade support without lifting all four paws together. The head leads the body;
+the tail's root stays on the hips while the brush follows a little later.
+Settling, rising, sniffing and startled interruptions blend the anatomy itself,
+not two translucent silhouettes. Breathing, blinking and ear movements run on
+their own quiet clocks. Updates subdivide legal elapsed slices to at most
+1/60 second to preserve the same contacts and transitions.
+
+`fox.js` rasterizes that rig into one 80×56 palette-indexed plate. Slender
+jointed legs, a layered brush tail, tapered muzzle, ivory cheek and ruff, guard
+hairs and a broken moonlit ridge preserve the pixel-art visitor. Ellipse
+scanlines keep the overlapping brush sections inexpensive. The latest plate
+is cached by fox identity and rig version and shared between views; drawing
+does not advance the animal. This replaces the old baked pose atlas, so
+visible visits do more rendering work, including subtle stationary motion.
+
 The coat changes from cool moonlight to flickering warm firelight as it
 approaches a lit hearth; light stays on the world-space fire-facing side on
 either side of camp. A cached silhouette of the right rock/grass cluster hides
 the animal on the upper trail, but not when it passes in front. All entrances
-extend beyond the full sprite width to avoid popping at the scene edges. A small blended
-contact shadow anchors its feet. The approved background remains unchanged.
+extend beyond the full sprite width to avoid popping at the scene edges.
+A small blended contact shadow anchors its feet. The approved background is
+unchanged.
 
 `FireScene` draws this layer into the fire's framebuffer and appends its bounds
 to the same dirty list. Both old and new sprite positions therefore participate
 in incremental copying, including the last frame when the animal disappears.
-No extra Canvas, animation timer, audio or persisted state is introduced. With
-all views inactive, current encounters are dismissed and the waiting countdown
-pauses. Gaps over one second dismiss/reschedule rather than catching up. Existing
-frog/cricket audio is unchanged; the fox is the first visual wildlife visitor.
+No extra production Canvas, timer, audio or persisted state is introduced.
+With all views inactive, current encounters are dismissed and the waiting
+countdown pauses. Gaps over one second dismiss/reschedule rather than catching
+up. Existing frog/cricket audio is unchanged.
+
+### Natural motion verification (2026-11-04)
 
 The sandbox fixture `scripts/preview-fox` offers immediate/frozen encounters in
-a real scene and popup sharing one state. Its toolbar inspects listening,
-sniffing, resting and turning. Preview-only IPC can capture a still or record
-20 fps scene frames with an optional timed startle; the recordings use the
-actual QML scene, not a second renderer. `tst_wildlife.qml` exercises local
-clicks, shared reactions, wallpaper/hidden/suspend lifetimes, and captures both
-views at 1x/2x. The Node QML gate compares their pixels and verifies that a
-departed fox leaves the exact original scene with no trails, without pinning a
-particular sprite design.
+a real scene and popup sharing one state, with frame stepping and slow motion.
+Recordings use deterministic simulation time and the actual QML renderer.
+The final version was inspected while stopping, turning, walking diagonally,
+rising, escaping from a seated pose and accelerating through a bend.
+
+These comparisons use seed 1, aligned at the same stop/turn, with the initial
+stride-only PR revision (`c649d4b`) on the left and the final articulated motion
+on the right:
+
+![Stopping and listening — before and after](screenshots/fox-natural-stop.gif)
+
+![Head-led, supported turn — before and after](screenshots/fox-natural-turn.gif)
+
+A nearby click during a seated rest, followed by the final rising/escape motion:
+
+![Seated startle and escape](screenshots/fox-natural-startle.gif)
+
+All 56 standard checks passed in the guest with no skips. They include real
+shared-scene clicks and clean departures at 1x/2x, plus focused behavior checks
+for interruption continuity, two-coordinate planted paws, waypoint/reversal
+speed and larger elapsed slices. A separate 5 ms sampling of the recorded
+ordinary turn found at least two stationary paws throughout all 129 samples.
+
+A warmed real-Qt rasterization probe (100 plates per pose) measured about
+2.6–2.9 ms per plate across idle, turn, sit and run in the software-rendered VM.
+The same two-view preview process used 37.4% of one CPU core without a visitor
+and 48.5% with an articulated visitor over two eight-second samples. The guest
+was covered by its lock screen during those CPU samples. These are bounded
+VM observations, not physical-GPU benchmarks or an isolated whole-shell cost
+measurement. The latest sprite is shared; each active view still composites
+its own lighting and scene.
 
 ## Desktop wallpaper
 
@@ -302,6 +351,7 @@ The reference asks for `ui-monospace, SFMono-Regular, Consolas, monospace`. On t
 | `tests/chrome.test.js` | reference fragment in headless Chromium with a stubbed frame clock vs fire.js at the same frames, outside moonlight bounds |
 | `tests/scene.test.js` | background and closest frame vs `reference/approved-scene.png` outside moonlight bounds; flame palette |
 | `tests/moonlight.test.js` | deterministic lake shimmer, water masking and occlusion, animation bounds, unchanged simulation state |
+| `tests/wildlife.test.js` | continuous startle appearance, world-space paw contacts, speed through waypoints/braking at reversals, larger time slices |
 | `tests/sim.test.js` | timings, actions, hit tests, status table, toast, dt cap, analytic advance, caps, persistence, icon |
 | `tests/package.test.js` | art hash, no symlinks, no machine paths, manifest rules, sound file regenerates |
 | `tests/qml.test.js` | qmltestrunner offscreen at 1x and 2x (`tests/qml/`): real mouse/key events, focus ring after a click (`tst_focus.qml`), geometry, grabs, no warnings; grabbed scene compared with fire.js pixel for pixel; `omarchy plugin validate` |

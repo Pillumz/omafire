@@ -107,7 +107,8 @@ app-sandbox launch -- bash scripts/preview-fox
 ```
 
 The preview-only toolbar can replay a seeded visit immediately, choose the
-next fox, inspect listening/sniffing/resting/turning, startle it, or pause/resume.
+next fox, inspect listening/sniffing/resting/turning, startle it, pause/resume,
+step one frame, or switch to quarter-speed playback.
 Not every visit includes every pose (a passing fox need not sit). IPC `seed(n)`
 selects a repeatable visit: 1 lingers from the rocks, 2 crosses from the rocks
 to the left trail, 6 enters from the right trail, and 8 forages from the left.
@@ -118,7 +119,12 @@ visits.
 For a repeatable motion capture, create a guest directory, then call the
 fixture's `record(directory, seconds, spookAt)` IPC method. `spookAt = -1`
 records an undisturbed visit; a nonnegative value clicks near the fox at that
-visit time. For a seated startle, use `pose("sit")` followed by `spook()` on seed 1.
+visit time. To record from an inspected pose instead of restarting the visit, use
+`recordCurrent(directory, seconds, spookAt)`. For example, on seed 1 use
+`pose("sit")` and then `recordCurrent(directory, 3.5, 0.4)` to record a nearby
+click 0.4 seconds into the seated rest. `step(0.05)` advances one paused frame;
+`slow(0.25)` selects quarter speed, and `resume()` starts playback. Playback
+advances simulation time, not wall time, so a slow VM does not dismiss the visit.
 Frames are numbered PNGs at 20 fps, captured from the actual scene. `recording()` reports completion.
 Select the fixture with `qs ipc -p /tmp/omafire-fox.*/shell.qml`; use
 `app-sandbox fetch` to export the resulting images or an encoded video. The
