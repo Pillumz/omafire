@@ -6,7 +6,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { ROOT } = require("./lib/images");
+const { ROOT, readRGBA, backgroundRGBA } = require("./lib/images");
 
 const APPROVED_SHA256 = "365ebe7720cdb95261c54f002a56b78eeba98bfb5d68c456b3cf6c71b00e9c3f";
 
@@ -21,9 +21,22 @@ function walk(dir, out = []) {
   return out;
 }
 
-test("approved campsite art is unchanged", () => {
+test("approved campsite is unchanged, including the center of the wide artwork", () => {
   const sha = crypto.createHash("sha256").update(fs.readFileSync(path.join(ROOT, "assets", "campsite-approved.webp"))).digest("hex");
   assert.equal(sha, APPROVED_SHA256);
+  // The live scene overlays this center: a regenerated or shifted campsite
+  // would visibly jump at its boundary, even if the original file survived.
+  const original = backgroundRGBA();
+  const wide = readRGBA(path.join(ROOT, "assets", "campsite-wide.webp"));
+  assert.equal(wide.width, 960);
+  assert.equal(wide.height, original.height);
+  for (let y = 0; y < original.height; y++) {
+    assert.deepEqual(
+      wide.data.subarray((y * wide.width + 120) * 4, (y * wide.width + 120 + original.width) * 4),
+      original.data.subarray(y * original.width * 4, (y + 1) * original.width * 4),
+      `original artwork row ${y} stays aligned and pixel-identical`
+    );
+  }
 });
 
 test("no symlinks in the plugin", () => {

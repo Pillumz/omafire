@@ -47,16 +47,34 @@ Item {
             // underneath. FireScene handles logs/coals; keyboard shortcuts and
             // normal windows above this layer remain unaffected.
 
-            FireScene {
-                id: scene
-                // Preserve aspect ratio and cover the output, cropping equally
-                // on opposite edges. Keep the original 360 x 240 render buffer.
-                readonly property real cover: Math.max(desktop.width / 360, desktop.height / 240)
-                width: 360 * cover
+            Item {
+                id: landscape
+                // Extend only the wallpaper's sides. Both layers share this
+                // scale; the original 360 x 240 scene and input stay intact.
+                readonly property real cover: Math.max(desktop.width / 480, desktop.height / 240)
+                width: 480 * cover
                 height: 240 * cover
                 x: (desktop.width - width) / 2
                 y: (desktop.height - height) / 2
-                fire: FireSession.fire
+                clip: true
+
+                Image {
+                    anchors.fill: parent
+                    source: Qt.resolvedUrl("../assets/campsite-wide.webp")
+                    smooth: false
+                    mipmap: false
+                }
+
+                FireScene {
+                    id: scene
+                    // The wide art contains the untouched 720 x 480 original
+                    // at x=120: its logical central scene begins at x=60.
+                    x: 60 * landscape.cover
+                    y: 0
+                    width: 360 * landscape.cover
+                    height: landscape.height
+                    fire: FireSession.fire
+                }
             }
         }
     }
