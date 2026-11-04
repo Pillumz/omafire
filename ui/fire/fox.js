@@ -78,14 +78,16 @@ function tail(im, phase, seat, run, bob) {
 
 function footAt(phase, offset, hip, moving, run) {
     if (!moving) return [hip + 1, 0];
-    var p = (phase + offset) % 1;
-    if (run) return [hip + Math.cos(p * Math.PI * 2) * 9, -Math.max(0, Math.sin(p * Math.PI * 2)) * 6];
-    // 62% ground contact. During stance the paw travels back exactly one
-    // body stride per cycle, so it stays on the same patch of ground.
-    var stance = 0.62, span = 16 * stance;
-    if (p < stance) return [hip + span / 2 - p * 16, 0];
+    // Keep the bound's existing lift timing, but return airborne paws
+    // forward and push planted paws back, just as in the walking stride.
+    var p = (phase + offset + (run ? 0.5 : 0)) % 1;
+    var stride = run ? 22 : 16, stance = run ? 0.5 : 0.62;
+    var span = stride * stance;
+    // Match the body's horizontal travel during contact. Both gaits keep
+    // a paw on the same patch of ground, rather than pedalling or skating.
+    if (p < stance) return [hip + span / 2 - p * stride, 0];
     var s = (p - stance) / (1 - stance);
-    return [hip - span / 2 + smooth(s) * span, -Math.sin(s * Math.PI) * 4.5];
+    return [hip - span / 2 + smooth(s) * span, -Math.sin(s * Math.PI) * (run ? 6 : 4.5)];
 }
 function limb(im, hip, foot, hind, far) {
     var bend = hind ? -3.5 : 1.8;

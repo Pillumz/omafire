@@ -89,7 +89,7 @@ function startVisit(state) {
     state.fox = {
         x: GROUND[entry].x, y: GROUND[entry].y, node: entry,
         direction: entry === 0 ? 1 : -1, pose: "walk",
-        age: 0, poseAge: 0, phase: 0, distance: 0, runAge: 0,
+        age: 0, poseAge: 0, phase: 0, gaitDistance: 0, runAge: 0,
         fleeing: false, mood: mood, entry: entry, exit: exit,
         plan: plan, action: null
     };
@@ -99,7 +99,8 @@ function begin(fox, action) {
     fox.action = action;
     fox.pose = action.pose;
     fox.poseAge = 0;
-    fox.phase = action.startPhase || 0;
+    fox.phase = action.pose === "walk" || action.pose === "run"
+        ? gaitPhase(fox) : action.startPhase || 0;
     fox.startX = fox.x; fox.startY = fox.y;
     if (action.node !== undefined) {
         var length = distance(fox, GROUND[action.node]);
@@ -123,6 +124,8 @@ function nextAction(fox) {
     begin(fox, action);
     return true;
 }
+// Sprite paws travel horizontally, not along the route's diagonal length.
+function gaitPhase(fox) { return (fox.gaitDistance / (fox.pose === "run" ? 22 : 16)) % 1; }
 function ease(t) { return t * t * (3 - 2 * t); }
 function runDistance(t) { return t < 0.6 ? 24 * t * t : 8.64 + 28.8 * (t - 0.6); }
 function runDuration(d) { return d < 8.64 ? Math.sqrt(d / 24) : 0.6 + (d - 8.64) / 28.8; }
@@ -186,7 +189,7 @@ function advance(state, dt) {
     while (dt > 0) {
         var action = fox.action, duration = action.duration;
         var step = Math.min(dt, Math.max(0, duration - fox.poseAge));
-        var oldX = fox.x, oldY = fox.y;
+        var oldX = fox.x;
         fox.poseAge = Math.min(duration, fox.poseAge + step);
         fox.age += step;
         var progress = duration > 0 ? fox.poseAge / duration : 1;
@@ -199,10 +202,9 @@ function advance(state, dt) {
             fox.x = fox.startX + (target.x - fox.startX) * fraction;
             fox.y = fox.startY + (target.y - fox.startY) * fraction;
         }
-        var dx = fox.x - oldX, dy = fox.y - oldY;
-        fox.distance += Math.sqrt(dx * dx + dy * dy);
+        fox.gaitDistance += Math.abs(fox.x - oldX);
         fox.phase = fox.pose === "walk" || fox.pose === "run"
-            ? (fox.distance / (fox.pose === "run" ? 22 : 16)) % 1
+            ? gaitPhase(fox)
             : fox.pose === "turn" || fox.pose === "settle" || fox.pose === "rise"
             ? (action.startPhase || 0) + (1 - (action.startPhase || 0)) * progress
             : (fox.poseAge / (fox.pose === "sniff" ? 1.5 : 2.4)) % 1;

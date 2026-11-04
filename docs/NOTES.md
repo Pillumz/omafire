@@ -96,7 +96,9 @@ visits avoid repeating the same entrance. Scent investigations can double back;
 only lingering visits sit, for 5–12 seconds. Pace, listening pauses, sniff counts
 and exits vary. Wary visits return to their entrance; others usually leave by
 a different route. Planning consumes the private RNG once per visit, not once
-per frame. Travel is eased and paw phase follows distance in both axes.
+per frame. Travel is eased; paw phase follows horizontal ground covered, matching
+its side-view stride even on angled trails. Movement segments start at the
+current gait phase rather than briefly flashing the first plate.
 
 A scene click within 24 px of the body startles it. Escape chooses the shortest
 connected route to cover, including either end of a partially walked segment,
@@ -109,8 +111,9 @@ The artwork in `fox.js` is articulated pixel polygons, compiled into sixteen
 80×44 palette-indexed plates per pose at module load (about 495 KiB of ink
 indices across nine poses). Slender jointed legs, a layered brush tail, tapered
 muzzle, ivory cheek and ruff, guard hairs and a broken moonlit ridge give the
-silhouette and coat definition. Walking feet follow distance with a planted
-stance and lifted return; running uses paired bounds and a flexing back.
+silhouette and coat definition. Walking and running feet follow horizontal
+distance with a planted backward push and lifted forward return; running uses
+paired bounds and a flexing back.
 Sniffing bends the neck as well as the head. Settling, rising and turning use
 nonlooping progress, with a front-facing chest/head plate during a turn.
 The coat changes from cool moonlight to flickering warm firelight as it
@@ -137,6 +140,33 @@ clicks, shared reactions, wallpaper/hidden/suspend lifetimes, and captures both
 views at 1x/2x. The Node QML gate compares their pixels and verifies that a
 departed fox leaves the exact original scene with no trails, without pinning a
 particular sprite design.
+
+### Gait correction verification (2026-11-04)
+
+The escape cycle now pushes planted paws backward relative to the body and
+returns lifted paws forward. Its contact span matches the 22 px horizontal
+stride, rather than using a sinusoid that pushed grounded paws forward.
+Walking uses the same contact rule at its existing 16 px stride.
+
+The real QML fixture was recorded before and after at 20 fps in an app-sandbox
+VM (seed 8, startled at 12 seconds). These matched scene crops show the same
+leftward escape; the earlier cycle skates across the ground, while the corrected
+cycle keeps its horizontal contacts planted within pixel/frame rounding.
+
+![Before and after escape stride](screenshots/fox-gait-comparison.webp)
+
+![Matched recordings: before on the left, after on the right](screenshots/fox-gait-comparison.gif)
+
+A numerical contact sweep checked both gaits' planted push and forward return.
+A separate 300-seed comparison (including 208 startles) confirmed unchanged
+positions, facing, routes, poses, visit timing and RNG consumption. The real
+preview also exercised a click on a seated fox: it rises before escaping, and
+both scene sizes share the reaction. All 52 standard checks passed in the guest,
+with no skips, including shared clicks and clean departures at 1x/2x.
+
+This remains a sixteen-frame side-view animation, not a terrain-aware leg rig;
+static-to-moving pose changes can still reposition paws. The change corrects
+the stride and horizontal sliding, without redesigning those transitions.
 
 ## Desktop wallpaper
 
