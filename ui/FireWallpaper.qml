@@ -5,11 +5,10 @@ import Quickshell.Wayland
 import "fire"
 
 // An ordinary service plugin in the existing shell, not another process.
-// Themes opt in with an omafire-wallpaper file containing "enabled".
+// The unmodified Campfire theme enables the shared desktop scene by name.
 Item {
     id: root
 
-    readonly property string current: Quickshell.env("HOME") + "/.local/state/omarchy/current/"
     property bool enabled: false
     readonly property bool active: enabled && Quickshell.screens.length > 0
 
@@ -21,22 +20,12 @@ Item {
     }
 
     FileView {
-        id: marker
-        path: root.current + "theme/omafire-wallpaper"
+        path: Quickshell.env("HOME") + "/.local/state/omarchy/current/theme.name"
         printErrors: false
         watchChanges: true
         onFileChanged: reload()
-        onLoaded: root.enabled = text().trim() === "enabled"
+        onLoaded: root.enabled = text().trim() === "campfire"
         onLoadFailed: root.enabled = false
-    }
-    // Reopen the marker after a theme switch: the staged theme directory is
-    // replaced, so watching only the old marker would miss later switches.
-    FileView {
-        path: root.current + "theme.name"
-        printErrors: false
-        watchChanges: true
-        onFileChanged: reload()
-        onLoaded: marker.reload()
     }
 
     Variants {

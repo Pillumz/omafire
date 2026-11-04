@@ -57,8 +57,14 @@ o.bind("SUPER + ALT + O", "OmaFire", "omarchy-shell wesleygrimes.omafire toggle"
 
 ![The desktop and popup sharing one live campfire](docs/screenshots/wallpaper.webp)
 
-Install the [Campfire theme](https://github.com/Pillumz/omarchy-campfire-theme)
-alongside this plugin. With that theme selected, the desktop and popup show the
+Install the original [Campfire theme](https://github.com/piermark/omarchy-campfire-theme)
+alongside this plugin. No theme fork or changes to its files are needed:
+
+```bash
+omarchy theme install https://github.com/piermark/omarchy-campfire-theme
+```
+
+With that theme selected, the desktop and popup show the
 same live fire: wood added in either view feeds both, and the fire really burns
 down and goes out unless you tend it.
 
@@ -79,14 +85,41 @@ wallpaper. No changes to Omarchy or Hyprland, no video player, and no additional
 process. Desktop mode uses the current Omarchy 4.5 theme staging layout; the
 widget still supports Omarchy 4.0.
 
-For other themes, a file named `omafire-wallpaper` containing `enabled` in the
-theme root opts into the same scene. Without the plugin, themes retain their
-ordinary still wallpaper.
+OmaFire activates the desktop scene when the active theme is named `campfire`.
+Other themes, including a renamed copy of Campfire, keep their normal wallpaper.
+Without this plugin, the original Campfire theme uses its ordinary still image.
+Do not run the theme\'s optional `extras/install-live`: that starts a separate
+recorded video, not the shared interactive fire.
 
 The animation currently runs even behind covering windows. It keeps the existing
 360 by 240 pixel buffer and 20 fps drawing rate; opening the popup or adding
 monitors adds another view, not another simulation. It does not guarantee that
 different screens present the same frame at exactly the same instant.
+
+### Replacing the old video wallpaper
+
+If you previously used the theme\'s video helper, stop and remove its user-level
+setup before using OmaFire\'s desktop scene:
+
+```bash
+systemctl --user stop campfire-live.service 2>/dev/null || true
+rm -f ~/.config/omarchy/hooks/theme-set.d/campfire-live \\
+      ~/.config/autostart/campfire-live.desktop \\
+      ~/.config/systemd/user/campfire-live.service \\
+      ~/.config/omarchy/campfire-live.conf
+systemctl --user daemon-reload
+```
+
+If you copied the old recording into additional wallpapers, remove that copy too
+so it does not appear as a second, non-interactive Campfire choice:
+
+```bash
+rm -f ~/.config/omarchy/backgrounds/campfire/02-campfire-live.mp4
+```
+
+This does not uninstall `mpvpaper` or stop unrelated players. Very old helper
+installations also added a `campfire-live` line to Hyprland\'s autostart file;
+remove that old entry if you still have one.
 
 ## Requirements
 
