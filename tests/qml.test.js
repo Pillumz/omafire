@@ -45,7 +45,7 @@ for (const scale of [1, 2]) {
     assert.deepEqual(problems, [], "no QML warnings or errors");
     const [w, h] = size(path.join(OUT, `popup-${scale}x.png`));
     assert.equal(w, 390 * scale);
-    assert.equal(h, 381 * scale);
+    assert.equal(h, 417 * scale);
 
     // The scene in the grab, sampled back at canvas pixel centres, must be
     // the approved art exactly where nothing animates (rows 60-140 of the

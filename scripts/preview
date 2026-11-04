@@ -1,0 +1,29 @@
+#!/bin/bash
+# Install the actual plugin into a disposable app-sandbox desktop, never the host.
+set -euo pipefail
+[[ ${APP_SANDBOX:-} == 1 ]] || {
+  echo "Run inside the VM: app-sandbox exec -- bash scripts/preview" >&2
+  exit 1
+}
+root="$(cd "$(dirname "$0")/.." && pwd)"
+target="$HOME/.config/omarchy/plugins/wesleygrimes.omafire"
+mkdir -p "$target"
+cp -r "$root/manifest.json" "$root/ui" "$root/assets" "$target/"
+omarchy-shell shell rescanPlugins
+for (( attempt = 0; attempt < 40; attempt++ )); do
+  if omarchy plugin list --json | jq -e 'any(.[]; .id == "wesleygrimes.omafire")' >/dev/null; then
+    break
+  fi
+  sleep 0.1
+done
+omarchy plugin enable wesleygrimes.omafire
+omarchy restart shell
+for (( attempt = 0; attempt < 40; attempt++ )); do
+  if omarchy-shell wesleygrimes.omafire status >/dev/null 2>&1; then
+    omarchy-shell wesleygrimes.omafire open
+    exit 0
+  fi
+  sleep 0.1
+done
+echo "OmaFire did not become ready in the guest shell." >&2
+exit 1

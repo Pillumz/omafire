@@ -1,6 +1,6 @@
 .pragma library
 // Popup size. The scene stays 3:2, so the panel has one degree of freedom:
-// its width. The default is the reference 390 x 381. A saved width lives
+// its width. The default is 390 x 417. A saved width lives
 // beside the fire, not inside it, so a missing or broken size file still
 // opens at that default.
 //
@@ -14,8 +14,9 @@ var DEFAULT_WIDTH = 390;
 var MIN_WIDTH = 300;
 var MAX_WIDTH = 960;
 var HEADER = 36;
-// 1 px rule, 11 px gap, 36 px buttons, 9 px gap, 16 px hint, 10 px pad.
-var FOOTER = 83;
+// 1 px rule, 11 px gap, 36 px buttons, 8 px gap, 28 px sound option,
+// 9 px gap, 16 px hint, 10 px pad.
+var FOOTER = 119;
 var CHROME = 1 + HEADER + 1 + FOOTER + 1;
 
 function sceneHeight(panelWidth) {

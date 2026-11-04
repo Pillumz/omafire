@@ -7,7 +7,7 @@ import "../../ui/fire"
 Item {
     id: host
     width: 420
-    height: 420
+    height: 460
 
     FireState { id: fire; autoTick: false; open: true }
 
@@ -40,7 +40,7 @@ Item {
             verify(!popup.keyboardFocusVisible);
             keyClick(Qt.Key_Backtab);
             verify(popup.keyboardFocusVisible, "Backtab after a click shows the ring");
-            verify(popup.soundButton.activeFocus, "Backtab wraps to the last button");
+            verify(popup.backgroundSoundButton.activeFocus, "Backtab wraps to the background-sound option");
 
             keyClick(Qt.Key_Tab);
             verify(popup.addButton.activeFocus, "Tab wraps to the first button");

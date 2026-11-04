@@ -91,12 +91,13 @@ Singleton {
             var o = JSON.parse(text);
             if (o && typeof o.width === "number" && isFinite(o.width))
                 panelWidth = Panel.clampWidth(o.width);
+            fire.backgroundSound = !!o && o.backgroundSound === true;
         } catch (e) { /* missing or broken: the default width stands */ }
     }
 
     function savePanel() {
         if (!panelLoaded) return;
-        panelStore.setText(JSON.stringify({ width: panelWidth }) + "\n");
+        panelStore.setText(JSON.stringify({ width: panelWidth, backgroundSound: fire.backgroundSound }) + "\n");
     }
 
     property FileView panelStore: FileView {
@@ -116,6 +117,7 @@ Singleton {
         target: session.fire
         function onChangedByUser() { session.dirty = true; saveSoon.restart(); }
         function onStatusKeyChanged() { session.dirty = true; }
+        function onBackgroundSoundChanged() { session.savePanel(); }
     }
     property Timer saveSoon: Timer { interval: 500; onTriggered: session.save() }
     // While the fire burns, keep the file within 30 s of the truth.

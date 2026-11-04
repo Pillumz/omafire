@@ -9,7 +9,7 @@ import "../../ui/fire"
 Item {
     id: host
     width: 420
-    height: 420
+    height: 460
 
     FireState {
         id: fire
@@ -60,7 +60,7 @@ Item {
             compare(popup.scene.width, 388, "scene fills the interior");
             compare(popup.scene.height, 259, "scene is 3:2 (388 x 258.67 rounded)");
             verify(Math.abs(popup.scene.width / popup.scene.height - 1.5) < 0.005);
-            compare(popup.height, 381, "popup height");
+            compare(popup.height, 417, "popup includes the background-sound option");
             compare(popup.addButton.height, 36);
             compare(popup.addButton.width, popup.soundButton.width, "equal buttons");
             compare(popup.soundButton.x - popup.stokeButton.x - popup.stokeButton.width, 8, "8 px gap");
@@ -68,6 +68,7 @@ Item {
             compare(popup.resizeGrip.y + popup.resizeGrip.height, popup.height, "grip sits on the bottom");
             compare(fire.statusText, "● Burning steadily");
             compare(popup.soundButton.text, "Sound off");
+            compare(popup.backgroundSoundButton.text, "Keep sound when closed: off");
         }
 
         function test_2_capture() {
@@ -153,7 +154,7 @@ Item {
         }
 
         function test_6_keyboard() {
-            popup.forceActiveFocus();
+            popup.resetFocus();
             var fuel = fire.fuel;
             keyClick(Qt.Key_A);
             verify(fire.fuel > fuel, "A adds a log");
@@ -188,16 +189,25 @@ Item {
             grab(popup, "popup-rekindle-" + Screen.devicePixelRatio + "x.png");
         }
 
-        function test_8_resized_panel() {
+        function test_8_background_sound_option() {
+            mouseClick(popup.backgroundSoundButton);
+            verify(fire.backgroundSound);
+            verify(!fire.sound, "background preference does not turn sound on");
+            compare(popup.backgroundSoundButton.text, "Keep sound when closed: on");
+            keyClick(Qt.Key_Space);
+            verify(!fire.backgroundSound, "the option also works from the keyboard");
+        }
+
+        function test_9_resized_panel() {
             popup.panelWidth = 520;
             compare(popup.width, 520, "width follows panelWidth");
             compare(popup.scene.width, 518);
             compare(popup.scene.height, 345, "scene stays 3:2");
-            compare(popup.height, 467);
+            compare(popup.height, 503);
             compare(popup.resizeGrip.y + popup.resizeGrip.height, popup.height);
             popup.panelWidth = 390;
             compare(popup.width, 390, "back to the reference size");
-            compare(popup.height, 381);
+            compare(popup.height, 417);
         }
     }
 }

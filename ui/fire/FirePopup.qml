@@ -3,9 +3,10 @@ import "panel.js" as Panel
 
 // The compact popup from the approved reference: 390 px wide including its
 // 1 px border, OMAFIRE header with the status label, the 3:2 scene, three
-// footer buttons and the hint. Plain QtQuick so it renders standalone.
+// footer buttons, background-sound option and the hint. Plain QtQuick so it
+// renders standalone.
 // panelWidth is the one size the host saves. Leave it at the default and the
-// popup is the reference 390 x 381.
+// popup is 390 x 417.
 //
 // Keys: A adds a log, S stokes, M toggles sound, Escape asks to close, Tab
 // moves between the buttons (Space/Enter press them).
@@ -29,6 +30,7 @@ FocusScope {
     readonly property alias addButton: addButton
     readonly property alias stokeButton: stokeButton
     readonly property alias soundButton: soundButton
+    readonly property alias backgroundSoundButton: backgroundSoundButton
     readonly property alias resizeGrip: grip
 
     readonly property int interiorWidth: width - 2
@@ -46,6 +48,7 @@ FocusScope {
         addButton.focus = false;
         stokeButton.focus = false;
         soundButton.focus = false;
+        backgroundSoundButton.focus = false;
         forceActiveFocus();
     }
     onRunningChanged: if (running) resetFocus()
@@ -54,7 +57,7 @@ FocusScope {
     // KeyNavigation on the buttons, which would consume the key before this
     // handler sees it and leave the ring hidden after a pointer click.
     function focusNext(step) {
-        var buttons = [addButton, stokeButton, soundButton], i = -1;
+        var buttons = [addButton, stokeButton, soundButton, backgroundSoundButton], i = -1;
         for (var k = 0; k < buttons.length; k++) if (buttons[k].activeFocus) i = k;
         var j = i < 0 ? (step > 0 ? 0 : buttons.length - 1) : (i + step + buttons.length) % buttons.length;
         buttons[j].forceActiveFocus(step > 0 ? Qt.TabFocusReason : Qt.BacktabFocusReason);
@@ -184,12 +187,32 @@ FocusScope {
             }
         }
 
+        FireButton {
+            id: backgroundSoundButton
+            objectName: "backgroundSound"
+            x: 12
+            y: 12 + 36 + 8
+            width: footer.width - 24
+            height: 28
+            text: "Keep sound when closed: " + (root.fire.backgroundSound ? "on" : "off")
+            pressedLook: root.fire.backgroundSound
+            fontFamily: root.fontFamily
+            showFocusRing: root.keyboardFocusVisible
+            Accessible.role: Accessible.CheckBox
+            Accessible.checkable: true
+            Accessible.checked: root.fire.backgroundSound
+            Accessible.onToggleAction: clicked()
+            onPointerPressed: root.keyboardFocusVisible = false
+            onClicked: root.fire.backgroundSound = !root.fire.backgroundSound
+        }
+
         Text {
             x: 12
-            y: 12 + 36 + 9
+            y: 12 + 36 + 8 + 28 + 9
             width: footer.width - 24
             height: 16
             text: root.fire.hint
+            elide: Text.ElideRight
             color: "#aaa599"
             font.family: root.fontFamily
             font.pixelSize: 11

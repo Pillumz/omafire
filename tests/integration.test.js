@@ -74,6 +74,7 @@ function qmlProblems(output) {
 
 for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshell on ${host.name}`, { skip, timeout: 120000 }, async () => {
   assemble(host.name);
+  fs.rmSync(path.join(DIR, "panel.json"), { force: true });
   // A save from 100 s ago at full fuel.
   const savedAt = Date.now() - 100000;
   fs.writeFileSync(STATE, JSON.stringify({ version: 1, fuel: 1, heat: 0.9, savedAt }));
@@ -89,12 +90,13 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
     assert.ok(Math.abs(st.fuel - (1 - 100 * 0.00125)) < 0.01, `restored fuel advanced by the 100 s away (${st.fuel})`);
     assert.equal(st.open, false);
     assert.equal(st.sound, false, "sound starts off");
+    assert.equal(st.backgroundSound, false, "background sound is opt-in");
 
     // Toggle from a bar button, then through IPC; only one popup at a time.
     ipc("omafire-harness", "press", 0);
     assert.equal(ipc("omafire-harness", "openOn"), "A");
     assert.equal(ipc("omafire-harness", "rendering"), "true", "scene runs while open");
-    assert.equal(ipc("omafire-harness", "popupSize"), "390x381", "popup fills the panel card");
+    assert.equal(ipc("omafire-harness", "popupSize"), "390x417", "popup fills the panel card");
     ipc("omafire-harness", "press", 1);
     assert.equal(ipc("omafire-harness", "openOn"), "B", "opening on another monitor moves the popup");
     ipc("wesleygrimes.omafire", "close");
@@ -117,6 +119,13 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
     st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
     assert.ok(st.fuel > 0.99, "add log caps at 1");
 
+    // Save the background preference without starting sound. It must survive
+    // a restart without silently starting playback in the next session.
+    ipc("wesleygrimes.omafire", "backgroundSound");
+    st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
+    assert.equal(st.backgroundSound, true);
+    assert.equal(st.audioPlaying, false);
+
     await sleep(800); // debounced save
     const saved = JSON.parse(fs.readFileSync(STATE, "utf8"));
     assert.equal(saved.version, 1);
@@ -134,6 +143,9 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
     const st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
     assert.equal(st.fuel, 0.68);
     assert.equal(st.status, "Burning steadily");
+    assert.equal(st.backgroundSound, true, "background preference survives a restart");
+    assert.equal(st.sound, false, "restart still requires explicitly turning sound on");
+    assert.equal(st.audioPlaying, false);
   } finally {
     await qs.stop();
   }

@@ -1,5 +1,7 @@
 # OmaFire
 
+This fork of [Wes Grimes's OmaFire](https://github.com/wesleygrimes/omafire) adds optional background ambience: sound can keep playing when the popup is closed. The original quiet-by-default behavior is unchanged.
+
 A tiny campfire for your Omarchy bar.
 
 Click the flame in the bar and a little campsite opens up. Throw a log on, stoke it, poke the coals, then go back to work and let it burn down on its own. It doesn't track anything, doesn't nag you, and won't tell you how productive you were.
@@ -7,7 +9,7 @@ Click the flame in the bar and a little campsite opens up. Throw a log on, stoke
 ![The OmaFire popup with the fire burning and moonlight shimmering on the lake](docs/screenshots/hero.webp)
 
 ```bash
-omarchy plugin add https://github.com/wesleygrimes/omafire --enable
+omarchy plugin add https://github.com/Pillumz/omafire --enable
 ```
 
 That's the whole install. The fire is in the right side of your bar.
@@ -19,7 +21,8 @@ That's the whole install. The fire is in the right side of your bar.
 - **Add a log.** Click **+ Add log**, or drag one from the woodpile at the lower left and drop it on the fire. One log is about three more minutes of fire.
 - **Stoke it.** **Stoke** makes it flare up for a bit. It doesn't add wood, so stoking an empty fire pit just gets you a polite note.
 - **Poke the coals.** Click the coals for a shower of sparks. Very satisfying, no practical value.
-- **Listen to it.** **Sound on** plays the fire. It follows the fire: a low fire is soft embers, a steady one crackles, a hot or stoked one roars, and adding a log or stoking has its own sound. It starts off every time and stops when the popup closes, because nobody wants a surprise fire noise in a meeting. With the sound on, crickets chirp in short phrases from off in the trees, and a frog calls now and then. Both stay soft, as if they were across the water.
+- **Listen to it.** **Sound on** plays the fire. It follows the fire: a low fire is soft embers, a steady one crackles, a hot or stoked one roars, and adding a log or stoking has its own sound. With the sound on, crickets chirp in short phrases from off in the trees, and a frog calls now and then. Both stay soft, as if they were across the water.
+- **Keep the ambience.** Turn **Keep sound when closed** on to let the fire, crickets and frogs keep playing after you close the popup. Turn **Sound off** to silence everything. Background sound defaults to off; its preference is remembered, but sound itself always starts off after a shell restart or login. Closing the popup still stops the scene animation.
 - **Leave it alone.** A full load burns for about 13 minutes, down to glowing embers, then coals, then rest. It keeps burning while the popup is closed, and after a restart or a suspend it picks up where it would have been.
 
 The bar icon is a little pixel fire that follows along, so you can tell at a glance whether it needs a log. Hover it for the status.
@@ -40,7 +43,7 @@ omarchy-shell wesleygrimes.omafire addLog
 omarchy-shell wesleygrimes.omafire status
 ```
 
-The functions are `toggle`, `open`, `close`, `addLog`, `stoke`, `poke`, `sound`, and `status` (prints JSON with fuel, heat, boost, status, open, and sound).
+The functions are `toggle`, `open`, `close`, `addLog`, `stoke`, `poke`, `sound`, `backgroundSound`, and `status`. `sound` toggles playback; `backgroundSound` toggles whether sound may continue with the popup closed. `status` prints JSON with fuel, heat, boost, status, open, sound, backgroundSound, and audioPlaying.
 
 To open it from the keyboard, add a binding to `~/.config/hypr/bindings.lua`:
 
@@ -88,14 +91,14 @@ omarchy plugin remove wesleygrimes.omafire --yes
 rm -rf ~/.local/state/omafire
 ```
 
-The second line deletes the saved fire (fuel and heat) and the saved panel size. OmaFire doesn't write anywhere else.
+The second line deletes the saved fire (fuel and heat), panel size and background-sound preference. OmaFire doesn't write anywhere else.
 
 ### Manual install
 
 If you'd rather not use `omarchy plugin add`:
 
 ```bash
-git clone https://github.com/wesleygrimes/omafire ~/.config/omarchy/plugins/wesleygrimes.omafire
+git clone https://github.com/Pillumz/omafire ~/.config/omarchy/plugins/wesleygrimes.omafire
 omarchy-shell shell rescanPlugins
 omarchy plugin enable wesleygrimes.omafire
 ```
@@ -108,7 +111,7 @@ The fire started life as a small browser prototype. OmaFire ports its drawing co
 
 It only draws while the popup is open, and then only the parts of the picture that changed. With the popup closed the cost is the bar icon, which is about 1% of one core on my VM. With it open it's roughly a fifth of one core, which is about what a small animated campfire should cost you.
 
-State lives in `~/.local/state/omafire/state.json` (or under `$XDG_STATE_HOME`). Sound is never saved. Drag the lower-left corner to resize the panel; the width is remembered in `panel.json` beside that file, and the next open uses it. The scene stays 3:2.
+State lives in `~/.local/state/omafire/state.json` (or under `$XDG_STATE_HOME`). Sound is never saved. The background-sound preference is remembered in `panel.json` beside that file. Drag the lower-left corner to resize the panel; its width is remembered there too, and the next open uses it. The scene stays 3:2.
 
 More detail, including the numbers, is in [docs/NOTES.md](docs/NOTES.md).
 
