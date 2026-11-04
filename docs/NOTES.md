@@ -8,7 +8,7 @@ Target checked on 2026-10-31: Omarchy 4.0.0 (Quattro), Quickshell 0.3.2, Qt 6.12
 manifest.json            bar-widget, entry ui/OmaFireBar.qml
 ui/OmaFireBar.qml        host integration: BarWidget + BarIconButton + KeyboardPanel
 ui/FireSession.qml       singleton: one fire for all monitors, state file, IPC
-ui/FireWallpaper.qml     service: theme opt-in, desktop layer and cropped scene
+ui/FireWallpaper.qml     service: theme opt-in, desktop layer and wide framing
 ui/qmldir                singleton FireSession, OmaFireBar
 ui/fire/                 plain QtQuick, no qs.* imports (renders standalone)
   fire.js                simulation + software renderer (.pragma library, node-loadable)
@@ -23,7 +23,7 @@ ui/fire/                 plain QtQuick, no qs.* imports (renders standalone)
   FireButton.qml         footer button
   FireIcon.qml           12 x 12 bar campfire
   FireAudio.qml          QtMultimedia, created on first Sound press only
-assets/                  campsite-approved.webp (unchanged), fire-*.wav and night calls (generated)
+assets/                  campsite-approved.webp (unchanged), campsite-wide.webp, generated sounds
 scripts/gen-fire.py      fire layers and one-shots (deterministic)
 scripts/gen-night.py     cricket and frog calls (deterministic)
 scripts/measure.js       CPU/RSS measurement in a live Wayland session
@@ -155,9 +155,28 @@ Desktop double-clicks therefore do not open either picker. Theme changes remain
 available through Omarchy's menu (Super+Space). Removing the live layer restores
 the ordinary desktop click behavior.
 
-Each window reuses FireScene with `max(screenWidth / 360, screenHeight / 240)`
-scaling, centered in the screen. This covers without stretching or margins.
-Extreme shapes may crop the woodpile or fire; no alternate composition ships.
+Each window centers a 480 x 240 logical landscape with
+`max(screenWidth / 480, screenHeight / 240)` scaling. A static, nearest-sampled
+Image displays `assets/campsite-wide.webp` (960 x 480), whose central 720 x 480
+pixels are the unchanged original artwork at x=120, y=0. The original FireScene
+is a separate child of the landscape, overlaid at logical x=60, y=0, using the
+same scale. It retains its own clip, 360 x 240 buffer, cached art, animation and
+pointer mapping; the landscape also clips its children. The wide Image is not
+inside FireScene's central clip, so the extended sides remain visible. They
+are static scenery, and unused pointer input still stops at the desktop window.
+
+Artwork provenance: the side scenery was generated with OpenAI `gpt-image-2`;
+only the generated side strips were retained. `assets/campsite-approved.webp`
+remains byte-identical, and its decoded 720 x 480 pixels are pasted exactly at
+x=120, y=0 in the lossless 960 x 480 wide asset. The outer strips are quantized
+to 2 x 2 source-pixel blocks to match the 360 x 240 scene's pixel density, with
+a narrow edge blend confined to those strips, outside the original scene.
+The popup does not load the wide artwork.
+
+This covers without stretching or margins and retains the full original scene
+on aspect ratios from 3:2 through 2:1, including 3840x2160 (16:9). Taller outputs
+crop horizontally and wider outputs crop vertically, equally at opposite edges;
+extreme shapes may still crop the woodpile or fire. The popup is unchanged.
 The simulation and audio are shared, but each active view has its own Canvas
 and 20 fps paint timer. There is no full-window occlusion detection or video
 player. Sound policy is unchanged: wallpaper visibility does not itself start
