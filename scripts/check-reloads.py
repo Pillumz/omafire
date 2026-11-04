@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import statistics
 import subprocess
 import sys
@@ -18,12 +19,21 @@ PROBE = "omafire-reload-probe"
 
 def command(args, timeout=3):
     start = time.monotonic()
-    try:
-        p = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
-        return {"seconds": round(time.monotonic() - start, 4), "code": p.returncode,
-                "out": p.stdout.strip(), "err": p.stderr.strip()}
-    except subprocess.TimeoutExpired:
-        return {"seconds": round(time.monotonic() - start, 4), "code": "timeout"}
+    with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          text=True, start_new_session=True) as p:
+        try:
+            stdout, stderr = p.communicate(timeout=timeout)
+            return {"seconds": round(time.monotonic() - start, 4), "code": p.returncode,
+                    "out": stdout.strip(), "err": stderr.strip()}
+        except subprocess.TimeoutExpired:
+            # A setup shell may have grandchildren retaining its output pipes.
+            # Bound the whole command group, not just its immediate child.
+            try:
+                os.killpg(p.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            p.communicate(timeout=1)
+            return {"seconds": round(time.monotonic() - start, 4), "code": "timeout"}
 
 
 def require(result):
@@ -181,8 +191,20 @@ class Check:
                 if time.monotonic() >= deadline:
                     raise RuntimeError("Bar reconstruction did not complete within 15s")
                 time.sleep(0.1)
+            # Widgets and services load asynchronously. The witness alone is
+            # insufficient: give the real wallpaper the SAME bounded deadline
+            # to map and publish its IPC, without issuing another reload.
+            while True:
+                try:
+                    health = self.healthy()
+                    break
+                except RuntimeError as error:
+                    self.emit("recovering", reload=n, error=str(error))
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError("Wallpaper/bar/IPC recovery exceeded 15s") from error
+                    time.sleep(0.1)
             self.emit("reconstructed", reload=n, generation=generation,
-                      seconds=round(time.monotonic() - start, 4), **self.healthy())
+                      seconds=round(time.monotonic() - start, 4), **health)
             hot = 0
             for window in range(3):
                 sample = self.sample()
