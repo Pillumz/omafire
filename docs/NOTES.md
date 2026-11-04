@@ -84,10 +84,11 @@ Per frame, fire.js flags the tiles it drew into; the scene recopies those and la
 ## Desktop wallpaper
 
 The manifest also registers a service entry point, `ui/FireWallpaper.qml`.
-It lives in the existing shell and watches the current staged theme for an
-`omafire-wallpaper` marker containing `enabled`. It reopens that marker after
-`theme.name` changes, because theme staging replaces the directory. A missing
-marker is normal, disables wallpaper mode, and is not logged as an error.
+It lives in the existing shell and watches the canonical active theme name in
+`~/.local/state/omarchy/current/theme.name`. Exactly `campfire` enables the live
+scene; another name or an unreadable file disables it. No theme marker, fork or
+other theme modifications are needed. Renamed copies use their normal wallpaper.
+The original theme\'s optional video installer is not used.
 
 One bottom-layer PanelWindow per output sits above the ordinary background and
 below normal windows, with no keyboard focus or exclusive zone. The full window

@@ -68,6 +68,15 @@ app-sandbox down
 The preview installs the actual plugin into the guest's running Omarchy shell;
 it refuses to run on the host. The guest needs Quickshell, Qt Quick/Qt Test,
 `qt6-imageformats`, `qt6-multimedia`, Node 22+, Chromium and ImageMagick.
+For desktop verification, install the unmodified theme inside the guest:
+
+```sh
+app-sandbox exec -- omarchy theme install https://github.com/piermark/omarchy-campfire-theme
+```
+
+Its canonical name must be `campfire`; no marker file is needed. Do not run the
+theme\'s optional video helper.
+
 For audio verification without physical speakers, create a guest-only sink:
 
 ```sh
@@ -79,7 +88,7 @@ Turn sound and **Keep sound when closed** on, close the popup, and check
 `omarchy-shell wesleygrimes.omafire status` and the guest sink's monitor.
 Verify that **Sound off** silences it, disabling background sound restores
 close-to-mute behavior, and restarting the guest shell keeps the preference
-but starts muted. The popup should still stop animating while closed. With an enabled wallpaper theme,
+but starts muted. The popup should still stop animating while closed. With Campfire selected,
 the desktop keeps animating from the same fire. Verify a successful desktop log
 drop increases fuel, an off-target drop does not, and switching away from the
 theme removes the live layer. Check the woodpile and fire at more than one
