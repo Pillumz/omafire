@@ -186,13 +186,28 @@ Item {
             }
         }
 
+        // QTBUG-150544: numeric-size createImageData omits image storage
+        // from Qt's memory accounting, then subtracts it on collection. Use
+        // the correctly-accounted readback path instead. Readback contains
+        // existing pixels (and may extend past the canvas for the extra row),
+        // so explicitly make an opaque black buffer before any partial copy.
+        // These buffers are still allocated only on first use and reused.
+        function imageBuffer(ctx, width, height) {
+            var image = ctx.getImageData(0, 0, width, height);
+            var data = image.data;
+            for (var i = 0; i < data.length; i += 4) {
+                // Qt stores premultiplied pixels: set alpha before colour.
+                data[i + 3] = 255;
+                data[i] = 0; data[i + 1] = 0; data[i + 2] = 0;
+            }
+            return image;
+        }
+
         function segment(ctx, ty, sg) {
             var key = ty * segsX + sg, img = segImages[key];
             if (!img) {
                 var w = segTiles * tile;
-                img = ctx.createImageData(w, tile);
-                // Qt keeps pixels premultiplied: set alpha before colour.
-                for (var a = 3, da = img.data, n = w * tile * 4; a < n; a += 4) da[a] = 255;
+                img = imageBuffer(ctx, w, tile);
                 segImages[key] = img;
                 var first = ty * tilesX + sg * segTiles;
                 tileStale.fill(1, first, Math.min(first + segTiles, (ty + 1) * tilesX));
@@ -250,10 +265,7 @@ Item {
                 // the canvas's size replaces the backing image 1:1 in device
                 // pixels on Wayland (half size at scale 2), not through the
                 // device scale like any other put.
-                out = ctx.createImageData(Fire.W, Fire.H + 1);
-                // Qt keeps pixels premultiplied: set alpha before colour.
-                var d = out.data;
-                for (var a = 3; a < d.length; a += 4) d[a] = 255;
+                out = imageBuffer(ctx, Fire.W, Fire.H + 1);
             }
             var cur = flip ? rectsA : rectsB, prev = flip ? rectsB : rectsA;
             flip = !flip;
