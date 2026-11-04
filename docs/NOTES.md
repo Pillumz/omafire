@@ -8,6 +8,7 @@ Target checked on 2026-10-31: Omarchy 4.0.0 (Quattro), Quickshell 0.3.2, Qt 6.12
 manifest.json            bar-widget, entry ui/OmaFireBar.qml
 ui/OmaFireBar.qml        host integration: BarWidget + BarIconButton + KeyboardPanel
 ui/FireSession.qml       singleton: one fire for all monitors, state file, IPC
+ui/FireWallpaper.qml     service: theme opt-in, desktop layer and cropped scene
 ui/qmldir                singleton FireSession, OmaFireBar
 ui/fire/                 plain QtQuick, no qs.* imports (renders standalone)
   fire.js                simulation + software renderer (.pragma library, node-loadable)
@@ -45,8 +46,8 @@ The host-independent components live in `ui/fire/` because a qmldir that declare
 Ported from `reference/animation.js` with identical arithmetic and random draw order (seed 5919). The parity test runs the original script and `fire.js` through the same frame clock and inputs and compares every drawn frame outside the native moonlight bounds (`218 <= x < 309`, `90 <= y < 143`). The fire simulation and reference rendering there remain unchanged.
 
 - Fuel decays 0.00125/s: full load 800 s, initial 0.68 lasts 544 s, one log adds 200 s.
-- While the popup is open the simulation steps every 16 ms (the reference stepped every animation frame) with dt capped at 0.08 s, and the scene draws every 50 ms (180 ms with reduced motion).
-- Any time beyond the 0.08 s cap, and all time while the popup is closed, is applied analytically: fuel linearly, boost linearly, heat by the closed-form solution of `h' = 0.75 (max(0, fuel - 0.015) - h)` (the reference's Euler step converges to it; tested within 0.003 of the stepped result). No particle catch-up.
+- While the popup or wallpaper is active the simulation steps every 16 ms (the reference stepped every animation frame) with dt capped at 0.08 s, and the scene draws every 50 ms (180 ms with reduced motion).
+- Any time beyond the 0.08 s cap, and all time while neither popup nor wallpaper is active, is applied analytically: fuel linearly, boost linearly, heat by the closed-form solution of `h' = 0.75 (max(0, fuel - 0.015) - h)` (the reference's Euler step converges to it; tested within 0.003 of the stepped result). No particle catch-up.
 - A wall-clock gap over 1 s (suspend, a stalled shell) is applied once, analytically.
 - Particle caps (new): 160 sparks, 40 smoke; oldest dropped first.
 
@@ -79,6 +80,29 @@ The scene Canvas is 360 x 240 logical and scaled to the 388 px interior with `sm
 - The ratio has to come from the window. With fractional scaling on Wayland, `Screen.devicePixelRatio` reports 2 while the window uses 1.33 or 1.6, which left the art in the top-left of the scene when the decoder used the screen ratio. Offscreen runs can't show this because both values match there. A new layer-shell window also passes through other ratios (2, then 1, then 1.33) before it settles, so art decoded at a stale ratio is decoded again.
 
 Per frame, fire.js flags the tiles it drew into; the scene recopies those and last frame's tiles, writing only pixels that changed.
+
+## Desktop wallpaper
+
+The manifest also registers a service entry point, `ui/FireWallpaper.qml`.
+It lives in the existing shell and watches the current staged theme for an
+`omafire-wallpaper` marker containing `enabled`. It reopens that marker after
+`theme.name` changes, because theme staging replaces the directory. A missing
+marker is normal, disables wallpaper mode, and is not logged as an error.
+
+One bottom-layer PanelWindow per output sits above the ordinary background and
+below normal windows, with no keyboard focus or exclusive zone. Input regions
+cover only the scene's existing woodpile rectangle and coals circle. During a
+log drag the input region expands to the screen until release. Other desktop
+clicks pass to the normal background; desktop shortcuts inside the hotspots are
+intentionally unavailable.
+
+Each window reuses FireScene with `max(screenWidth / 360, screenHeight / 240)`
+scaling, centered in the screen. This covers without stretching or margins.
+Extreme shapes may crop the woodpile or fire; no alternate composition ships.
+The simulation and audio are shared, but each active view has its own Canvas
+and 20 fps paint timer. There is no full-window occlusion detection or video
+player. Sound policy is unchanged: wallpaper visibility does not itself start
+sound or bypass the saved background-sound preference.
 
 ## CPU and memory (measured)
 
@@ -114,7 +138,7 @@ RSS is about 480 MB for the whole shell, not OmaFire's share.
 
 A snap is a noise burst with a 1.2 ms onset and a 5-25 ms decay, through two broad bands (Q 1.3 and 1.6, about 0.9-1.9 kHz and 2-3.2 kHz) and, for big ones, a low knock band. Broad bands and the soft onset are what keep it from sounding like a pitched drip or like electrical static. Crackles come in flurries: the rate follows a slow random curve raised to the fourth power, so there are calm stretches between bursts. A quiet bed of tiny dark snaps sits under everything so no snap pops out of silence. Each loop is soft-limited, darkened at 5 kHz, and crossfaded over 0.8 s so it is seamless. The loops have different lengths so the mix doesn't repeat audibly.
 
-Playback uses `MediaPlayer` + `AudioOutput`, not `SoundEffect`: SoundEffect refused the 22.05 kHz mono format on PipeWire because it doesn't resample. All three loops play while sound is on, each at `0.5 * gain` from `ui/fire/sound.js`: embers fade in by heat 0.08 and ease back 30% when hot, crackle rises from heat 0.08 to 0.55, roar comes in from 0.6 to 0.95 or with boost (a stoke or a fresh log). Levels ease over 0.6 s; on/off fades over 0.3 s. Adding a log (button, key, or drag) and a successful stoke play their one-shots at 0.2. Playing requires sound on and either the popup open or the saved `backgroundSound` preference enabled. By default closing fades out and stops the players; with background sound enabled, closing leaves playback and the night scheduler uninterrupted while the scene stops drawing. Unregistering the last bar widget (disable, removal or the last monitor disappearing) stops and destroys the players and resets sound to off; removing one of several widgets leaves the shared fire playing. The QML singleton itself can outlive disabled plugins. No output device, a missing QtMultimedia, or a player error shows "Sound unavailable." and leaves it off.
+Playback uses `MediaPlayer` + `AudioOutput`, not `SoundEffect`: SoundEffect refused the 22.05 kHz mono format on PipeWire because it doesn't resample. All three loops play while sound is on, each at `0.5 * gain` from `ui/fire/sound.js`: embers fade in by heat 0.08 and ease back 30% when hot, crackle rises from heat 0.08 to 0.55, roar comes in from 0.6 to 0.95 or with boost (a stoke or a fresh log). Levels ease over 0.6 s; on/off fades over 0.3 s. Adding a log (button, key, or drag) and a successful stoke play their one-shots at 0.2. Playing requires sound on and either the popup open or the saved `backgroundSound` preference enabled. By default closing fades out and stops the players; with background sound enabled, closing leaves playback and the night scheduler uninterrupted while the scene stops drawing. Unregistering the last bar widget when no wallpaper is active (disable, removal or the last monitor disappearing) stops and destroys the players and resets sound to off; removing one of several widgets leaves the shared fire playing. The QML singleton itself can outlive disabled plugins. No output device, a missing QtMultimedia, or a player error shows "Sound unavailable." and leaves it off.
 
 Qt Multimedia ignores PipeWire's "Dummy Output" sink, so a machine with no sound hardware (a VM, a headless box reached over remote desktop) has no output and sound is unavailable. A null sink (`pactl load-module module-null-sink`) set as default gives Qt a device.
 

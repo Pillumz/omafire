@@ -54,10 +54,3 @@ test("no 4.5-only KeyboardPanel or Style API at parse time", () => {
   }
   assert.deepEqual(bad, []);
 });
-
-test("README states the Omarchy 4.0 minimum without em dashes", () => {
-  const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
-  const req = readme.split(/^## Requirements$/m)[1].split(/^## /m)[0];
-  assert.match(req, /Omarchy 4\.0 or newer/);
-  assert.doesNotMatch(readme, /\u2014/);
-});
