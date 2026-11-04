@@ -235,6 +235,11 @@ Item {
             tileFlags.fill(0);
         }
 
+        function drawWildlife(frame, dirty) {
+            var bounds = Fox.draw(frame, root.fire.wildlife.fox, root.fire.heat);
+            if (bounds) Fire.includeRect(dirty, bounds[0], bounds[1], bounds[2], bounds[3]);
+        }
+
         onPaint: {
             if (!bg || !root.fire) return;
             var ctx = getContext("2d");
@@ -252,9 +257,7 @@ Item {
             }
             var cur = flip ? rectsA : rectsB, prev = flip ? rectsB : rectsA;
             flip = !flip;
-            Fire.render(fb, root.fire.sim, bg, cur);
-            var foxBounds = Fox.draw(fb, root.fire.wildlife.fox, root.fire.heat);
-            if (foxBounds) Fire.includeRect(cur, foxBounds[0], foxBounds[1], foxBounds[2], foxBounds[3]);
+            Fire.render(fb, root.fire.sim, bg, cur, drawWildlife);
             if (fullLeft > 0) {
                 // Counts only once the window has presented since the last
                 // full frame (or when there is no window to ask).

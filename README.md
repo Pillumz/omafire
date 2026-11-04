@@ -184,6 +184,8 @@ State lives in `~/.local/state/omafire/state.json` (or under `$XDG_STATE_HOME`).
 
 The fox is hand-drawn pixel art with walking, sniffing, listening and running poses, a small contact shadow, and cooler colours away from the fire. Its first visit comes after roughly 45–100 seconds of active scene time, with 2½–6 minute quiet gaps between visits. Visits stop when neither scene is active, and a suspend dismisses the current visitor rather than replaying missed encounters. No extra timer, process or saved animal state.
 
+![A fox visits the clearing, sniffs, then runs back to cover when startled](docs/screenshots/fox-visit.gif)
+
 More detail, including the numbers, is in [docs/NOTES.md](docs/NOTES.md).
 
 ## Development
