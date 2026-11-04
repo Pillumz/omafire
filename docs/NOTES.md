@@ -90,15 +90,24 @@ Per frame, fire.js flags the tiles it drew into; the scene recopies those and la
 RNG seeded at session creation. It uses the existing simulation driver, only
 while a popup or wallpaper is active. First visit: 45–100 active seconds;
 subsequent gaps: 150–360 seconds. A visit walks from behind the right boulder
-into the clearing (8 s), pauses (3 s), sniffs (4 s), listens (3 s) and walks back
-(8 s). A scene click within 24 px of the body turns it towards cover, alerts for
-0.35 s, then runs home at twice walking speed. Repeated clicks cannot delay its
-escape. Fire controls and unrelated scene clicks do not startle it.
+into the clearing (8 s, easing in/out), listens (2.5 s), sniffs twice (3 s),
+settles (0.8 s), sits (5 s), rises (0.7 s), turns (0.65 s) and walks back
+(8 s). The route stays at x260–332, y176–178. A scene click within 24 px of the
+body startles it: a seated fox first rises, then anticipates for 0.22 s, turns
+if necessary (0.3 s) and accelerates to 28.8 px/s. An interrupted turn continues
+from its current angle. Repeated clicks cannot delay escape. Fire controls and
+unrelated scene clicks do not startle it.
 
-The artwork in `fox.js` is hand-positioned pixel polygons, compiled into four
-small palette-indexed frames per pose at module load. Gait follows distance;
-sniffing and listening use pose time. The coat changes from cool moonlight to
-warm firelight as it approaches a lit hearth. A cached silhouette of the right
+The artwork in `fox.js` is articulated pixel polygons, compiled into sixteen
+80×44 palette-indexed plates per pose at module load (about 495 KiB of ink
+indices across nine poses). Slender jointed legs, a layered brush tail, tapered
+muzzle, ivory cheek and ruff, guard hairs and a broken moonlit ridge give the
+silhouette and coat definition. Walking feet follow distance with a planted
+stance and lifted return; running uses paired bounds and a flexing back.
+Sniffing bends the neck as well as the head. Settling, rising and turning use
+nonlooping progress, with a front-facing chest/head plate during a turn.
+The coat changes from cool moonlight to flickering warm firelight as it
+approaches a lit hearth; light stays on the world-space fire-facing side. A cached silhouette of the right
 rock/grass cluster hides the animal as it enters and leaves. A small blended
 contact shadow anchors its feet. The approved background remains unchanged.
 
@@ -111,7 +120,10 @@ pauses. Gaps over one second dismiss/reschedule rather than catching up. Existin
 frog/cricket audio is unchanged; the fox is the first visual wildlife visitor.
 
 The sandbox fixture `scripts/preview-fox` offers immediate/frozen encounters in
-a real scene and popup sharing one state. `tst_wildlife.qml` exercises local
+a real scene and popup sharing one state. Its toolbar inspects listening,
+sniffing, resting and turning. Preview-only IPC can capture a still or record
+20 fps scene frames with an optional timed startle; the recordings use the
+actual QML scene, not a second renderer. `tst_wildlife.qml` exercises local
 clicks, shared reactions, wallpaper/hidden/suspend lifetimes, and captures both
 views at 1x/2x. The Node QML gate compares their pixels and verifies that a
 departed fox leaves the exact original scene with no trails, without pinning a

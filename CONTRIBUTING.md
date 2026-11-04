@@ -103,9 +103,19 @@ views with a shared fire and visitor:
 app-sandbox launch -- bash scripts/preview-fox
 ```
 
-The preview-only toolbar can play a visit immediately, freeze it for inspection,
-startle it, or pause/resume. Click near the fox in either scene to exercise real
-input. Production has no extra buttons or forced visits.
+The preview-only toolbar can play a visit immediately, inspect listening,
+sniffing, resting and turning, startle it, or pause/resume. Click near the fox in
+either scene to exercise real input. Production has no extra buttons or forced
+visits.
+
+For a repeatable motion capture, create a guest directory, then call the
+fixture's `record(directory, seconds, spookAt)` IPC method. `spookAt = -1`
+records an undisturbed visit; `16` startles the resting fox. Frames are numbered
+PNGs at 20 fps, captured from the actual scene. `recording()` reports completion.
+Select the fixture with `qs ipc -p /tmp/omafire-fox.*/shell.qml`; use
+`app-sandbox fetch` to export the resulting images or an encoded video. The
+capture size follows the guest device scale, so inspect its actual dimensions
+before cropping.
 
 Keep these rules from [docs/NOTES.md](docs/NOTES.md):
 

@@ -21,7 +21,7 @@ That's the whole install. The fire is in the right side of your bar.
 - **Add a log.** Click **+ Add log**, or drag one from the woodpile at the lower left and drop it on the fire. One log is about three more minutes of fire.
 - **Stoke it.** **Stoke** makes it flare up for a bit. It doesn't add wood, so stoking an empty fire pit just gets you a polite note.
 - **Poke the coals.** Click the coals for a shower of sparks. Very satisfying, no practical value.
-- **Watch for a visitor.** A pixel-art fox occasionally emerges from behind the right-hand rocks, pauses, sniffs the clearing and heads back into the trees. Click near it and it startles and runs for cover. It shares the same visit across the popup and wallpaper, and never needs feeding or attention.
+- **Watch for a visitor.** A red fox occasionally slips out from behind the right-hand rocks, listens, noses around the clearing and sits for a quiet moment by the fire. Its ears twitch, its brush tail sways, and moonlight catches its russet coat. Click near it and it rises, turns and bounds back to cover. It shares the same visit across the popup and wallpaper, and never needs feeding or attention.
 - **Listen to it.** **Sound on** plays the fire. It follows the fire: a low fire is soft embers, a steady one crackles, a hot or stoked one roars, and adding a log or stoking has its own sound. With the sound on, crickets chirp in short phrases from off in the trees, and a frog calls now and then. Both stay soft, as if they were across the water.
 - **Keep the ambience.** Turn **Keep sound when closed** on to let the fire, crickets and frogs keep playing after you close the popup. Turn **Sound off** to silence everything. Background sound defaults to off; its preference is remembered, but sound itself always starts off after a shell restart or login. Closing the popup stops its scene animation; an active live wallpaper keeps animating.
 - **Leave it alone.** A full load burns for about 13 minutes, down to glowing embers, then coals, then rest. It keeps burning while the popup is closed, and after a restart or a suspend it picks up where it would have been.
@@ -182,9 +182,9 @@ Each view draws only while active, and copies only the parts of the picture that
 
 State lives in `~/.local/state/omafire/state.json` (or under `$XDG_STATE_HOME`). Sound is never saved. The background-sound preference is remembered in `panel.json` beside that file. Drag the lower-left corner to resize the panel; its width is remembered there too, and the next open uses it. The scene stays 3:2.
 
-The fox is hand-drawn pixel art with walking, sniffing, listening and running poses, a small contact shadow, and cooler colours away from the fire. Its first visit comes after roughly 45–100 seconds of active scene time, with 2½–6 minute quiet gaps between visits. Visits stop when neither scene is active, and a suspend dismisses the current visitor rather than replaying missed encounters. No extra timer, process or saved animal state.
+The fox is articulated pixel art with sixteen-frame walking, sniffing, sitting, turning and bounding animations. Planted paws and a soft contact shadow give it weight; its layered coat catches cool moonlight and warmer, flickering light from the hearth. Its first visit comes after roughly 45–100 seconds of active scene time, with 2½–6 minute quiet gaps between visits. Visits stop when neither scene is active, and a suspend dismisses the current visitor rather than replaying missed encounters. No extra timer, process or saved animal state.
 
-![A fox visits the clearing, sniffs, then runs back to cover when startled](docs/screenshots/fox-visit.gif)
+![A fox listens, sniffs, rests by the fire and turns back towards the trees](docs/screenshots/fox-visit.gif)
 
 More detail, including the numbers, is in [docs/NOTES.md](docs/NOTES.md).
 

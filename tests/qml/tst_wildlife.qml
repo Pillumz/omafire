@@ -24,9 +24,16 @@ Item {
             tryVerify(function() { return sceneA.framesDrawn >= a + 3 && sceneB.framesDrawn >= b + 3; }, 5000);
             wait(50);
         }
+        function advanceUntilPose(pose) {
+            for (var i = 0; i < 1200; i++) {
+                if (fire.wildlife.fox && fire.wildlife.fox.pose === pose) return;
+                Wildlife.advance(fire.wildlife, 1 / 60);
+            }
+            fail("visitor did not reach " + pose);
+        }
         function visit() {
             Wildlife.startVisit(fire.wildlife);
-            for (var i = 0; i < 600; i++) Wildlife.advance(fire.wildlife, 1 / 60);
+            advanceUntilPose("idle");
             fire.sync();
             nextFrames();
         }
@@ -51,16 +58,23 @@ Item {
             grab(sceneB, "arrived-B");
             mouseClick(sceneA, 120, 230);
             compare(fire.wildlife.fox.pose, "idle", "unrelated clicks do not scare the fox");
-            mouseClick(sceneB, 264, 165);
+            var facing = fire.wildlife.fox.direction;
+            mouseClick(sceneB, fire.wildlife.fox.x, fire.wildlife.fox.y - 12);
             compare(fire.wildlife.fox.pose, "alert");
-            compare(fire.wildlife.fox.direction, 1, "turn towards cover");
+            compare(fire.wildlife.fox.direction, facing, "startle anticipates without flipping");
             compare(fire.fuel, fuel, "animal clicks do not feed the fire");
-            Wildlife.advance(fire.wildlife, 0.5);
+            advanceUntilPose("turn");
+            compare(fire.wildlife.fox.direction, facing, "turn retains facing until complete");
+            advanceUntilPose("run");
+            compare(fire.wildlife.fox.direction, 1, "completed turn faces cover");
             nextFrames();
-            compare(fire.wildlife.fox.pose, "run");
             grab(sceneA, "run-A");
             grab(sceneB, "run-B");
-            for (var i = 0; i < 50; i++) Wildlife.advance(fire.wildlife, 0.1);
+            for (var i = 0; i < 50; i++) {
+                var fox = fire.wildlife.fox;
+                if (fox) fire.pointerDown(fox.x, fox.y - 12);
+                Wildlife.advance(fire.wildlife, 0.1);
+            }
             nextFrames();
             compare(fire.wildlife.fox, null);
             grab(sceneA, "departed");
