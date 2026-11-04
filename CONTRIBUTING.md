@@ -94,7 +94,10 @@ but starts muted. The popup should still stop animating while closed. With Campf
 the desktop keeps animating from the same fire. Verify a successful desktop log
 drop increases fuel, an off-target drop does not, and switching away from the
 theme removes the live layer. Check the woodpile and fire at more than one
-screen shape; the desktop uses aspect-preserving center crop.
+screen shape: 3:2, 16:9 and 2:1 should retain the full original campsite over
+the static extended scenery. Taller and wider outputs use centered cropping.
+Check log drops and nearby fox clicks after resizing, and verify clicks in the
+extended sides do not open the still-wallpaper picker. The popup stays 3:2.
 
 For a repeatable wildlife art/interaction preview, launch the two real scene
 views with a shared fire and visitor:

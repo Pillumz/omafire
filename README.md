@@ -75,11 +75,14 @@ Desktop double-clicks do not open the wallpaper or theme picker while the live
 scene is active. Use **Super+Space** to open Omarchy's menu and change themes.
 Clicks near a visiting fox spook it; other clicks outside the woodpile and coals do nothing.
 
-The scene fills each screen without stretching, cropping equally at opposite
-edges. Wide or tall screens may crop useful parts of the artwork. There are no
-desktop buttons or extra shortcuts: use the widget for stoking and sound. Audio
-remains off at login; **Keep sound when closed** controls whether it continues
-when only the wallpaper is showing.
+The wallpaper extends the artwork to the left and right, filling each screen
+without stretching. Screens from 3:2 through 2:1 (including 16:9) show the full
+original campsite, with its fire, woodpile, fox, lake and stars unchanged. The
+popup keeps its original framing. Taller or wider screens still crop equally
+at opposite edges and may hide parts of the campsite. The extended sides are
+static scenery; there are no desktop buttons or extra shortcuts. Use the widget
+for stoking and sound. Audio remains off at login; **Keep sound when closed**
+controls whether it continues when only the wallpaper is showing.
 
 Switching to another theme removes the live layer and reveals the normal
 wallpaper. No changes to Omarchy or Hyprland, no video player, and no additional
