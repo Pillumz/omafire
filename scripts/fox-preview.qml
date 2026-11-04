@@ -10,14 +10,26 @@ ShellRoot {
     id: root
     FireState { id: fire; open: true }
 
+    property int visitSeed: 1
+    function resetVisit() {
+        fire.wildlife = Wildlife.create(visitSeed);
+        Wildlife.startVisit(fire.wildlife);
+    }
+    function inspectPose(pose) {
+        fire.autoTick = false;
+        resetVisit();
+        for (var i = 0; i < 10800 && fire.wildlife.fox && fire.wildlife.fox.pose !== pose; i++)
+            Wildlife.advance(fire.wildlife, 1 / 60);
+        fire.sync();
+    }
     function inspectAt(seconds) {
         fire.autoTick = false;
-        Wildlife.startVisit(fire.wildlife);
+        resetVisit();
         for (var i = 0; i < Math.round(seconds * 60); i++) fire.advance(1 / 60, true);
         fire.sync();
     }
     function play() {
-        Wildlife.startVisit(fire.wildlife);
+        resetVisit();
         fire.lastWall = Date.now();
         fire.autoTick = true;
         fire.sync();
@@ -33,7 +45,7 @@ ShellRoot {
         Row {
             x: 12; y: 8; spacing: 12
             Repeater {
-                model: ["Play visit", "Listen", "Sniff", "Rest", "Turn", "Spook", "Pause / resume"]
+                model: ["Play visit", "Next fox", "Listen", "Sniff", "Rest", "Turn", "Spook", "Pause / resume"]
                 Rectangle {
                     required property string modelData
                     width: label.implicitWidth + 24; height: 28
@@ -43,10 +55,11 @@ ShellRoot {
                         id: hover; anchors.fill: parent; hoverEnabled: true
                         onClicked: {
                             if (modelData === "Play visit") root.play();
-                            else if (modelData === "Listen") root.inspectAt(10);
-                            else if (modelData === "Sniff") root.inspectAt(11.25);
-                            else if (modelData === "Rest") root.inspectAt(16);
-                            else if (modelData === "Turn") root.inspectAt(20.3);
+                            else if (modelData === "Next fox") { root.visitSeed++; root.play(); }
+                            else if (modelData === "Listen") root.inspectPose("idle");
+                            else if (modelData === "Sniff") root.inspectPose("sniff");
+                            else if (modelData === "Rest") root.inspectPose("sit");
+                            else if (modelData === "Turn") root.inspectPose("turn");
                             else if (modelData === "Spook" && fire.wildlife.fox) fire.pointerDown(fire.wildlife.fox.x, fire.wildlife.fox.y - 12);
                             else { fire.lastWall = Date.now(); fire.autoTick = !fire.autoTick; }
                         }
@@ -88,6 +101,8 @@ ShellRoot {
         target: "omafire-fox-preview"
         function play(): void { root.play(); }
         function inspectAt(seconds: real): void { root.inspectAt(seconds); }
+        function seed(value: int): void { root.visitSeed = value; root.inspectAt(0); }
+        function pose(value: string): void { root.inspectPose(value); }
         function state(): string { return JSON.stringify(fire.wildlife); }
         function capture(path: string): void {
             scene.grabToImage(function(result) { result.saveToFile(path); }, Qt.size(720, 480));
@@ -106,5 +121,5 @@ ShellRoot {
         function resume(): void { fire.lastWall = Date.now(); fire.autoTick = true; }
         function quit(): void { Qt.quit(); }
     }
-    Component.onCompleted: inspectAt(10)
+    Component.onCompleted: inspectPose("idle")
 }

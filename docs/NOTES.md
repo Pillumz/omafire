@@ -89,14 +89,21 @@ Per frame, fire.js flags the tiles it drew into; the scene recopies those and la
 `FireState` owns one ephemeral wildlife state alongside the fire, with a separate
 RNG seeded at session creation. It uses the existing simulation driver, only
 while a popup or wallpaper is active. First visit: 45–100 active seconds;
-subsequent gaps: 150–360 seconds. A visit walks from behind the right boulder
-into the clearing (8 s, easing in/out), listens (2.5 s), sniffs twice (3 s),
-settles (0.8 s), sits (5 s), rises (0.7 s), turns (0.65 s) and walks back
-(8 s). The route stays at x260–332, y176–178. A scene click within 24 px of the
-body startles it: a seated fox first rises, then anticipates for 0.22 s, turns
-if necessary (0.3 s) and accelerates to 28.8 px/s. An interrupted turn continues
-from its current angle. Repeated clicks cannot delay escape. Fire controls and
-unrelated scene clicks do not startle it.
+subsequent gaps: 150–360 seconds. Visits choose a passing, foraging, lingering
+or wary intention. Three entrances (left/right foreground trails and the right
+boulder) connect to five dry-ground interest points around the hearth. Successive
+visits avoid repeating the same entrance. Scent investigations can double back;
+only lingering visits sit, for 5–12 seconds. Pace, listening pauses, sniff counts
+and exits vary. Wary visits return to their entrance; others usually leave by
+a different route. Planning consumes the private RNG once per visit, not once
+per frame. Travel is eased and paw phase follows distance in both axes.
+
+A scene click within 24 px of the body startles it. Escape chooses the shortest
+connected route to cover, including either end of a partially walked segment,
+never cutting through the hearth. A seated fox first rises, anticipates for
+0.22 s, turns if necessary (0.3 s), and accelerates to 28.8 px/s. Interrupted
+turns continue or reverse from the current angle. Repeated clicks cannot delay
+escape. Fire controls and unrelated scene clicks do not startle it.
 
 The artwork in `fox.js` is articulated pixel polygons, compiled into sixteen
 80×44 palette-indexed plates per pose at module load (about 495 KiB of ink
@@ -107,8 +114,10 @@ stance and lifted return; running uses paired bounds and a flexing back.
 Sniffing bends the neck as well as the head. Settling, rising and turning use
 nonlooping progress, with a front-facing chest/head plate during a turn.
 The coat changes from cool moonlight to flickering warm firelight as it
-approaches a lit hearth; light stays on the world-space fire-facing side. A cached silhouette of the right
-rock/grass cluster hides the animal as it enters and leaves. A small blended
+approaches a lit hearth; light stays on the world-space fire-facing side on
+either side of camp. A cached silhouette of the right rock/grass cluster hides
+the animal on the upper trail, but not when it passes in front. All entrances
+extend beyond the full sprite width to avoid popping at the scene edges. A small blended
 contact shadow anchors its feet. The approved background remains unchanged.
 
 `FireScene` draws this layer into the fire's framebuffer and appends its bounds
