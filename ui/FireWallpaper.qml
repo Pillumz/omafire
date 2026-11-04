@@ -53,26 +53,10 @@ Item {
             WlrLayershell.layer: WlrLayer.Bottom
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-            // Only the woodpile and coals take desktop input. Other clicks
-            // reach Omarchy's wallpaper picker as usual. A drag holds input
-            // until release, including outside the initial woodpile region.
-            mask: Region {
-                width: FireSession.fire.dragging ? desktop.width : 0
-                height: FireSession.fire.dragging ? desktop.height : 0
-                Region {
-                    x: scene.x
-                    y: scene.y + scene.height * 142 / 240
-                    width: scene.width * 88 / 360
-                    height: scene.height * 98 / 240
-                }
-                Region {
-                    x: scene.x + scene.width * 122 / 360
-                    y: scene.y + scene.height * 122 / 240
-                    width: scene.width * 118 / 360
-                    height: scene.height * 118 / 240
-                    shape: RegionShape.Ellipse
-                }
-            }
+            // Keep the full window's default input region. Unused desktop
+            // clicks stop here rather than opening the still-wallpaper picker
+            // underneath. FireScene handles logs/coals; keyboard shortcuts and
+            // normal windows above this layer remain unaffected.
 
             FireScene {
                 id: scene

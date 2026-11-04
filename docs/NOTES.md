@@ -90,11 +90,12 @@ It lives in the existing shell and watches the current staged theme for an
 marker is normal, disables wallpaper mode, and is not logged as an error.
 
 One bottom-layer PanelWindow per output sits above the ordinary background and
-below normal windows, with no keyboard focus or exclusive zone. Input regions
-cover only the scene's existing woodpile rectangle and coals circle. During a
-log drag the input region expands to the screen until release. Other desktop
-clicks pass to the normal background; desktop shortcuts inside the hotspots are
-intentionally unavailable.
+below normal windows, with no keyboard focus or exclusive zone. The full window
+receives pointer input. FireScene handles logs and coals; unused clicks stop at
+this surface instead of reaching Omarchy's still-wallpaper/theme picker below.
+Desktop double-clicks therefore do not open either picker. Theme changes remain
+available through Omarchy's menu (Super+Space). Removing the live layer restores
+the ordinary desktop click behavior.
 
 Each window reuses FireScene with `max(screenWidth / 360, screenHeight / 240)`
 scaling, centered in the screen. This covers without stretching or margins.
