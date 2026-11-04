@@ -64,8 +64,9 @@ down and goes out unless you tend it.
 
 On the exposed desktop, drag a log from the woodpile onto the fire, or click the
 coals for sparks. Normal windows stay above it and it never takes keyboard focus.
-Clicks outside the woodpile and coals reach Omarchy's desktop controls as usual;
-those controls are not available inside the two interactive areas.
+Desktop double-clicks do not open the wallpaper or theme picker while the live
+scene is active. Use **Super+Space** to open Omarchy's menu and change themes.
+Clicks outside the woodpile and coals do nothing.
 
 The scene fills each screen without stretching, cropping equally at opposite
 edges. Wide or tall screens may crop useful parts of the artwork. There are no
