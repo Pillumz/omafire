@@ -29,6 +29,9 @@ QtObject {
     property bool toastVisible: false
     property bool dragging: false
     property bool sound: false
+    // Saved separately from sound: allow ambience while the popup is closed,
+    // but never start playback automatically after a shell restart.
+    property bool backgroundSound: false
     property bool audioAvailable: true
     readonly property string hint: Fire.HINT
 
@@ -118,7 +121,7 @@ QtObject {
     }
 
     function statusJson() {
-        return JSON.stringify({ fuel: sim.fuel, heat: sim.heat, boost: sim.boost, status: Fire.status(sim).label, open: open, sound: sound });
+        return JSON.stringify({ fuel: sim.fuel, heat: sim.heat, boost: sim.boost, status: Fire.status(sim).label, open: open, sound: sound, backgroundSound: backgroundSound, audioPlaying: audioPlaying });
     }
 
     // ------------------------------------------------------------------ sound
@@ -148,7 +151,7 @@ QtObject {
         sound = true;
     }
 
-    readonly property bool audioPlaying: sound && open
+    readonly property bool audioPlaying: sound && (open || backgroundSound)
     onAudioPlayingChanged: if (audioObject) audioObject.playing = audioPlaying
     onSoundChanged: if (audioObject) audioObject.playing = audioPlaying
 

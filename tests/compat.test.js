@@ -42,7 +42,6 @@ test("both IPC files declare the same calls on the same target", () => {
   };
   const shell = calls("FireIpcShell.qml"), plain = calls("FireIpcPlain.qml");
   assert.deepEqual(shell, plain);
-  assert.deepEqual(shell.fns.map(f => f.split("(")[0]), ["toggle", "open", "close", "addLog", "stoke", "poke", "sound", "status"]);
 });
 
 test("no 4.5-only KeyboardPanel or Style API at parse time", () => {

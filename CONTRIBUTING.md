@@ -53,6 +53,34 @@ the reference art, offscreen QML tests and, on a live desktop, a Quickshell
 integration test and `omarchy plugin validate`. Tests that need a missing tool
 skip and say so. CI runs the same command.
 
+### Isolated desktop preview
+
+From your task checkout on a host with `app-sandbox`:
+
+```sh
+app-sandbox up --size half
+app-sandbox exec -- bash scripts/preview
+app-sandbox shot --desktop
+herd-test --no-pg app-sandbox exec -- node --test --test-concurrency=1 'tests/*.test.js'
+app-sandbox down
+```
+
+The preview installs the actual plugin into the guest's running Omarchy shell;
+it refuses to run on the host. The guest needs Quickshell, Qt Quick/Qt Test,
+`qt6-imageformats`, `qt6-multimedia`, Node 22+, Chromium and ImageMagick.
+For audio verification without physical speakers, create a guest-only sink:
+
+```sh
+app-sandbox exec -- pactl load-module module-null-sink sink_name=omafire_test
+app-sandbox exec -- pactl set-default-sink omafire_test
+```
+
+Turn sound and **Keep sound when closed** on, close the popup, and check
+`omarchy-shell wesleygrimes.omafire status` and the guest sink's monitor.
+Verify that **Sound off** silences it, disabling background sound restores
+close-to-mute behavior, and restarting the guest shell keeps the preference
+but starts muted. The popup should still stop animating while closed.
+
 Keep these rules from [docs/NOTES.md](docs/NOTES.md):
 
 - No network, no web view, no background service.

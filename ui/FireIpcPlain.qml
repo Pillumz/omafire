@@ -21,6 +21,7 @@ QtObject {
         function stoke(): void { box.session.fire.stoke(); }
         function poke(): void { box.session.fire.poke(); }
         function sound(): void { box.session.fire.toggleSound(); }
+        function backgroundSound(): void { box.session.fire.backgroundSound = !box.session.fire.backgroundSound; }
         function status(): string { return box.session.fire.statusJson(); }
     }
 }

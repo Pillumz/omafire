@@ -1,6 +1,6 @@
 // Popup chrome against the reference: screenshot the approved fragment in
 // headless Chromium at device scale 1 and 2, crop to the popup, compare the
-// header and footer with the native grabs from tests/qml.test.js (which runs
+// unchanged header with the native grabs from tests/qml.test.js (which runs
 // first), and write side-by-sides to tests/out/compare-{1,2}x.png.
 "use strict";
 const test = require("node:test");
@@ -13,7 +13,7 @@ const { chromium, writeHarness, dump, screenshot } = require("./lib/chrome");
 
 const BIN = chromium();
 
-test("popup chrome matches the reference at 1x and 2x", { skip: !BIN && "chromium not installed" }, () => {
+test("unchanged popup header matches the reference at 1x and 2x", { skip: !BIN && "chromium not installed" }, () => {
   // Frame 238 is about 4 s in, like the native capture.
   const file = writeHarness("popup", { stopFrame: 238, scriptUntil: -1 });
   const info = dump(BIN, file);
@@ -30,13 +30,12 @@ test("popup chrome matches the reference at 1x and 2x", { skip: !BIN && "chromiu
     execFileSync("magick", [crop, "-size", `${12 * scale}x${H}`, "xc:#181818", ours, "+append", path.join(OUT, `compare-${scale}x.png`)]);
     const a = readRGBA(crop), b = readRGBA(ours);
     const header = compare(a.data, b.data, W, H, 24, (x, y) => y < 38 * scale);
-    const footer = compare(a.data, b.data, W, H, 24, (x, y) => y >= 298 * scale);
-    console.log(`# ${scale}x header: mean abs ${header.meanAbs.toFixed(2)}, ${(header.withinTol * 100).toFixed(2)}% within 24; ` +
-      `footer: mean abs ${footer.meanAbs.toFixed(2)}, ${(footer.withinTol * 100).toFixed(2)}% within 24`);
+    // The footer intentionally differs from the prototype now. Its controls
+    // are exercised through real pointer and keyboard input in tst_popup.qml.
+    console.log(`# ${scale}x header: mean abs ${header.meanAbs.toFixed(2)}, ${(header.withinTol * 100).toFixed(2)}% within 24`);
     // Remaining differences: glyph antialiasing (Chromium vs Qt text), and the
     // reference's fractional scene height (258.67 px, here 259) which moves
     // its footer text by a fraction of a pixel.
     assert.ok(header.meanAbs < 4 && header.withinTol > 0.95, `${scale}x header`);
-    assert.ok(footer.meanAbs < 4 && footer.withinTol > 0.94, `${scale}x footer`);
   }
 });

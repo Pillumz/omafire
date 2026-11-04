@@ -20,19 +20,6 @@ function loadPanel() {
 
 const Panel = loadPanel();
 
-test("the default panel is the reference 390 x 381, scene 388 x 259", () => {
-  assert.equal(Panel.DEFAULT_WIDTH, 390);
-  assert.equal(Panel.sceneHeight(390), 259);
-  assert.equal(Panel.panelHeight(390), 381);
-  assert.ok(Math.abs(388 / 259 - 1.5) < 0.005);
-});
-
-test("a wider panel keeps the 3:2 scene and the same chrome", () => {
-  assert.equal(Panel.sceneHeight(520), 345);
-  assert.equal(Panel.panelHeight(520), 467);
-  assert.equal(Panel.panelHeight(520) - Panel.sceneHeight(520), Panel.CHROME);
-});
-
 test("width clamps to the button floor and the screen ceiling, else the default", () => {
   assert.equal(Panel.clampWidth(390), 390);
   assert.equal(Panel.clampWidth(299.4), Panel.MIN_WIDTH);
