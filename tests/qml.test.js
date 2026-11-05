@@ -84,16 +84,34 @@ for (const scale of [1, 2]) {
     // tst_wildlife.qml holds the fire clock still while a shared fox visits
     // and runs away. Compare real scene grabs (QtTest's grabImage truncates
     // to logical size at 2x) rather than locking a particular sprite design.
+    const samePixels = (a, b) => a.width === b.width && a.height === b.height
+      && Buffer.from(a.data).equals(Buffer.from(b.data));
+    const crop = (image, left, width) => {
+      left *= scale; width *= scale;
+      const data = new Uint8ClampedArray(width * image.height * 4);
+      for (let y = 0; y < image.height; y++) {
+        const start = (y * image.width + left) * 4;
+        data.set(image.data.subarray(start, start + width * 4), y * width * 4);
+      }
+      return { width, height: image.height, data };
+    };
     for (const entrance of ["rock", "right-trail", "left-trail"]) {
       const wildlife = name => readRGBA(path.join(OUT, `wildlife-${name}-${entrance}-${scale}x.png`));
-      const samePixels = (a, b) => a.width === b.width && a.height === b.height
-        && Buffer.from(a.data).equals(Buffer.from(b.data));
       const beforeFox = wildlife("before"), arrivedFox = wildlife("arrived-A");
       assert.equal(beforeFox.width, 360 * scale);
       assert.ok(!samePixels(beforeFox, arrivedFox), "a fox really appears in the scene");
-      assert.ok(samePixels(arrivedFox, wildlife("arrived-B")), "the same visitor appears in both views");
-      assert.ok(samePixels(wildlife("run-A"), wildlife("run-B")), "clicking one view startles both");
+      assert.equal(wildlife("arrived-B").width, 480 * scale);
+      assert.ok(samePixels(arrivedFox, crop(wildlife("arrived-B"), 60, 360)), "popup and wallpaper show the same campsite and visitor");
+      assert.ok(samePixels(wildlife("run-A"), crop(wildlife("run-B"), 60, 360)), "clicking the wallpaper startles both views");
       assert.ok(samePixels(beforeFox, wildlife("departed")), `${entrance}: departing restores all sprite and shadow pixels without trails`);
+      assert.ok(samePixels(wildlife("before-wide"), wildlife("departed-wide")), `${entrance}: the full landscape restores without trails`);
+    }
+    for (const side of ["left", "right"]) {
+      const wildlife = name => readRGBA(path.join(OUT, `wildlife-${name}-extension-${side}-${scale}x.png`));
+      const before = wildlife("before"), visible = wildlife("visible");
+      const left = side === "left" ? 0 : 420;
+      assert.ok(!samePixels(crop(before, left, 60), crop(visible, left, 60)), `the fox is drawn in the ${side} extension`);
+      assert.ok(samePixels(before, wildlife("departed")), `the ${side} extension restores after a nearby click`);
     }
 
     // tst_lifecycle.qml: after the window hides and shows, the scene moves

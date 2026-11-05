@@ -231,10 +231,15 @@ function makeSprite(fox) {
 }
 var cachedFox = null, cachedVersion = -1, cachedPlate = null;
 
-// The foreground boulder remains untouched as the visitor enters/leaves.
-var ROCK = [[295,151],[301,145],[312,139],[327,138],[340,137],[360,137],[360,181],[326,179],[318,177],[305,175],[291,168],[288,163]];
+// Follow the painted boulder and the ferns around its foot, including the
+// right-hand lobe beyond the old scene edge. No invisible vertical frame seam.
+var ROCK = [[288,163],[290,156],[295,150],[301,145],[312,139],[324,138],
+    [335,137],[344,137],[352,141],[359,145],[364,151],[367,158],
+    [370,163],[371,170],[369,177],[365,180],[350,180],[338,179],
+    [326,179],[318,177],[305,175],[297,174],[294,173],[293,170],[291,168]];
+var ROCK_X = 288, ROCK_Y = 137, ROCK_W = 84, ROCK_H = 44;
 function behindRock(x, y) {
-    if (x < 288 || y < 137 || y > 181) return false;
+    if (x < ROCK_X || x >= ROCK_X + ROCK_W || y < ROCK_Y || y >= ROCK_Y + ROCK_H) return false;
     var inside = false;
     for (var i = 0, j = ROCK.length - 1; i < ROCK.length; j = i++) {
         var a = ROCK[i], b = ROCK[j];
@@ -242,12 +247,19 @@ function behindRock(x, y) {
     }
     return inside;
 }
-var OCCLUSION = new Uint8Array(360 * 240);
-for (var oy = 137; oy <= 181; oy++) for (var ox = 288; ox < 360; ox++)
-    if (behindRock(ox + 0.5, oy + 0.5)) OCCLUSION[oy * 360 + ox] = 1;
+var OCCLUSION = new Uint8Array(ROCK_W * ROCK_H);
+for (var oy = 0; oy < ROCK_H; oy++) for (var ox = 0; ox < ROCK_W; ox++)
+    if (behindRock(ox + ROCK_X + 0.5, oy + ROCK_Y + 0.5)) OCCLUSION[oy * ROCK_W + ox] = 1;
+function occluded(x, y) {
+    return x >= ROCK_X && x < ROCK_X + ROCK_W && y >= ROCK_Y && y < ROCK_Y + ROCK_H
+        && OCCLUSION[(y - ROCK_Y) * ROCK_W + x - ROCK_X];
+}
 var bounds = [0,0,0,0];
-function draw(fb, fox, heat) {
-    if (!fox || fox.x + ANCHOR_X < 0 || fox.x - ANCHOR_X >= 360) return null;
+// left is a world coordinate; returned dirty bounds are framebuffer-local.
+// Popup and wallpaper rasterise the same animal, clipped to their own views.
+function draw(fb, fox, heat, left, width) {
+    left = left || 0; width = width || 360;
+    if (!fox || fox.x + ANCHOR_X < left || fox.x - ANCHOR_X >= left + width) return null;
     if (cachedFox !== fox || cachedVersion !== fox.rig.version) {
         cachedPlate = makeSprite(fox);
         cachedFox = fox; cachedVersion = fox.rig.version;
@@ -262,26 +274,26 @@ function draw(fb, fox, heat) {
     var shadowWidth = Math.round(mix(22,15,fox.rig.body.seat));
     for (var sy = -2; sy <= 2; sy++) for (var sx = -shadowWidth; sx <= shadowWidth; sx++) {
         var xx = px + sx, yy = py + sy;
-        if (xx < 0 || xx >= 360 || yy < 0 || yy >= 240 || (behindBoulder && OCCLUSION[yy * 360 + xx])) continue;
+        if (xx < left || xx >= left + width || yy < 0 || yy >= 240 || (behindBoulder && occluded(xx, yy))) continue;
         var a = Math.max(0, 1 - sx*sx/(shadowWidth*shadowWidth) - sy*sy/8) * 0.27;
-        var idx = (yy * 360 + xx) * 4;
+        var idx = (yy * width + xx - left) * 4;
         fb[idx] *= 1-a; fb[idx+1] *= 1-a; fb[idx+2] *= 1-a;
     }
     for (var y = 0; y < HEIGHT; y++) for (var x = 0; x < WIDTH; x++) {
         var c = im[y * WIDTH + x];
         if (!c) continue;
         var dx = px + x - ANCHOR_X, dy = py + y - ANCHOR_Y;
-        if (dx < 0 || dx >= 360 || dy < 0 || dy >= 240 || (behindBoulder && OCCLUSION[dy * 360 + dx])) continue;
+        if (dx < left || dx >= left + width || dy < 0 || dy >= 240 || (behindBoulder && occluded(dx, dy))) continue;
         // Light stays on the hearth-facing side, on either side of camp.
         var light = warmth * flicker * (0.78 + 0.22 * clamp(((px-dx)*fireSide+24)/48,0,1));
-        var col = COLOURS[c], i = (dy * 360 + dx) * 4;
+        var col = COLOURS[c], i = (dy * width + dx - left) * 4;
         fb[i] = col[0] * (0.67 + 0.33 * light);
         fb[i+1] = col[1] * (0.79 + 0.21 * light);
         fb[i+2] = col[2] * (1.04 - 0.04 * light);
     }
     // Both facing directions, tail, ears, airborne paws and contact shadow.
-    bounds[0] = Math.max(0,px-ANCHOR_X); bounds[1] = Math.max(0,py-ANCHOR_Y);
-    bounds[2] = Math.min(360,px+ANCHOR_X+1); bounds[3] = Math.min(240,py+HEIGHT-ANCHOR_Y);
+    bounds[0] = Math.max(0,px-ANCHOR_X-left); bounds[1] = Math.max(0,py-ANCHOR_Y);
+    bounds[2] = Math.min(width,px+ANCHOR_X+1-left); bounds[3] = Math.min(240,py+HEIGHT-ANCHOR_Y);
     return bounds;
 }
 if (typeof module !== "undefined" && module.exports) {

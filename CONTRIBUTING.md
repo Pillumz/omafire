@@ -99,8 +99,8 @@ the static extended scenery. Taller and wider outputs use centered cropping.
 Check log drops and nearby fox clicks after resizing, and verify clicks in the
 extended sides do not open the still-wallpaper picker. The popup stays 3:2.
 
-For a repeatable wildlife art/interaction preview, launch the two real scene
-views with a shared fire and visitor:
+For a repeatable wildlife art/interaction preview, launch the full-width
+wallpaper scene and original popup with a shared fire and visitor:
 
 ```sh
 app-sandbox launch -- bash scripts/preview-fox
@@ -111,7 +111,9 @@ next fox, inspect listening/sniffing/resting/turning, startle it, pause/resume,
 step one frame, or switch to quarter-speed playback.
 Not every visit includes every pose (a passing fox need not sit). IPC `seed(n)`
 selects a repeatable visit: 1 lingers from the rocks, 2 crosses from the rocks
-to the left trail, 6 enters from the right trail, and 8 forages from the left.
+to the left trail, 6 enters from the right trail, 7 leaves behind the rocks,
+and 8 forages from the left. Check the entire fox crosses the old central
+scene edges and is fully hidden when a rock entrance or departure finishes.
 `pose(name)` finds the first occurrence; `inspectAt(seconds)` freezes any time.
 Click near the fox in either scene to exercise real input. Production has no extra buttons or forced
 visits.

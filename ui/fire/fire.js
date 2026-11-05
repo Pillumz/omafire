@@ -141,7 +141,7 @@ function poke(s) {
 
 // ---------------------------------------------------------------- pointer
 
-function inWoodpile(x, y) { return x < 88 && y > 142; }
+function inWoodpile(x, y) { return x >= 0 && x < 88 && y > 142; }
 function onCoals(x, y) { return Math.hypot(x - BASE_X, y - (BASE_Y - 6)) < 59; }
 function inHearth(x, y) { return Math.hypot(x - BASE_X, y - (BASE_Y - 6)) < 65; }
 
@@ -321,7 +321,7 @@ function createFrame() {
     return fb;
 }
 
-// Nearest sampling of an RGBA source onto 360 x 240, like drawImage with
+// Nearest sampling of an RGBA source onto the scene, like drawImage with
 // imageSmoothingEnabled = false. Destination pixel centres map into the
 // source; a centre landing exactly on a source pixel boundary takes the lower
 // pixel, as Chromium does (checked against reference/approved-scene.png: the
@@ -330,24 +330,40 @@ function nearestIndex(i, srcSize, dstSize) {
     return Math.max(0, Math.min(srcSize - 1, Math.ceil((i + 0.5) * srcSize / dstSize - 1)));
 }
 
-function prepareBackground(src, sw, sh) {
-    var out = new Uint8ClampedArray(W * H * 4);
+function prepareBackground(src, sw, sh, width) {
+    width = width || W;
+    var out = new Uint8ClampedArray(width * H * 4);
     for (var y = 0; y < H; y++) {
         var sy = nearestIndex(y, sh, H);
-        for (var x = 0; x < W; x++) {
-            var sx = nearestIndex(x, sw, W);
-            var si = (sy * sw + sx) * 4, di = (y * W + x) * 4;
+        for (var x = 0; x < width; x++) {
+            var sx = nearestIndex(x, sw, width);
+            var si = (sy * sw + sx) * 4, di = (y * width + x) * 4;
             out[di] = src[si]; out[di + 1] = src[si + 1]; out[di + 2] = src[si + 2]; out[di + 3] = 255;
         }
     }
     return out;
 }
 
-// native: the prepared art, kept by the library (one instance per engine) so
-// a popup rebuilt on plugin reload doesn't decode it again.
-var _background = null;
-function cachedBackground() { return _background; }
-function cacheBackground(bg) { _background = bg; return bg; }
+// native: prepared art per width, kept across view rebuilds. All views use
+// one canonical core background so the moonlight mask is shared, too. Keep
+// array identities stable when a corrected device-scale decode arrives.
+var _backgrounds = {};
+function cachedBackground(width) { return _backgrounds[width || W] || null; }
+function cacheBackground(bg) {
+    var width = bg.length / (H * 4), cached = _backgrounds[width];
+    if (cached) cached.set(bg);
+    else { cached = bg; _backgrounds[width] = cached; }
+    if (width > W) {
+        var core = _backgrounds[W] || createFrame(), left = (width - W) / 2;
+        for (var y = 0; y < H; y++) {
+            var start = (y * width + left) * 4;
+            core.set(cached.subarray(start, start + W * 4), y * W * 4);
+        }
+        _backgrounds[W] = core;
+    }
+    _lakeOf = null;
+    return cached;
+}
 
 // native: moonlight follows the reflection painted into the lake. Cache a
 // water-only mask from the art so ripples disappear behind the island and
@@ -700,10 +716,10 @@ function markDirty(x0, y0, x1, y1) {
 
 // Additional scene layers use the same dirty list, so old sprite positions
 // are restored by the existing previous-frame tile copying path.
-function includeRect(list, x0, y0, x1, y1) {
+function includeRect(list, x0, y0, x1, y1, width) {
     if (!list) return;
     x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
-    x1 = Math.min(W, Math.ceil(x1)); y1 = Math.min(H, Math.ceil(y1));
+    x1 = Math.min(width || W, Math.ceil(x1)); y1 = Math.min(H, Math.ceil(y1));
     if (!(x1 > x0 && y1 > y0)) return;
     var r = list.r, k;
     if (list.n >= RECT_MAX) {
