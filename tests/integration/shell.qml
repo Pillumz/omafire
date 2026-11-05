@@ -39,6 +39,10 @@ ShellRoot {
             return p ? p.width + "x" + p.height : "";
         }
         function ipcRoute(): string { return OmaFire.FireSession.ipcRoute; }
+        function resizePanel(width: int): void {
+            OmaFire.FireSession.setPanelWidth(width);
+            OmaFire.FireSession.savePanel();
+        }
         function save(): void { OmaFire.FireSession.save(); }
         function quit(): void { Qt.quit(); }
     }

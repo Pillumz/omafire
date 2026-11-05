@@ -26,13 +26,18 @@ Singleton {
         return (cut < 0 ? "" : statePath.substring(0, cut + 1)) + "panel.json";
     }
     property int panelWidth: Panel.DEFAULT_WIDTH
+    // User intent survives shutdown and temporary audio-device failures.
+    property bool soundEnabled: false
     property bool panelLoaded: false
 
     property var widgets: []
     property var owner: null
     readonly property bool isOpen: owner !== null
     property bool wallpaperActive: false
-    onWallpaperActiveChanged: if (!wallpaperActive && widgets.length === 0) fire.shutdown()
+    onWallpaperActiveChanged: {
+        if (wallpaperActive) resumeSound();
+        else if (widgets.length === 0) fire.shutdown();
+    }
 
     property FireState fire: FireState {
         open: session.isOpen
@@ -41,8 +46,16 @@ Singleton {
         reducedMotion: Style.reduceMotion === true
     }
 
+    function resumeSound() {
+        if (panelLoaded && soundEnabled && !fire.sound) fire.setSound(true);
+    }
+
     function register(widget) {
-        if (widgets.indexOf(widget) === -1) widgets = widgets.concat([widget]);
+        if (widgets.indexOf(widget) === -1) {
+            widgets = widgets.concat([widget]);
+            // Plugin rescans can rebuild the views while retaining this singleton.
+            if (widgets.length === 1) resumeSound();
+        }
     }
     function unregister(widget) {
         widgets = widgets.filter(function (w) { return w !== widget; });
@@ -98,12 +111,14 @@ Singleton {
             if (o && typeof o.width === "number" && isFinite(o.width))
                 panelWidth = Panel.clampWidth(o.width);
             fire.backgroundSound = !!o && o.backgroundSound === true;
-        } catch (e) { /* missing or broken: the default width stands */ }
+            soundEnabled = !!o && o.sound === true;
+            fire.setSound(soundEnabled);
+        } catch (e) { /* missing or broken: the defaults stand */ }
     }
 
     function savePanel() {
         if (!panelLoaded) return;
-        panelStore.setText(JSON.stringify({ width: panelWidth, backgroundSound: fire.backgroundSound }) + "\n");
+        panelStore.setText(JSON.stringify({ width: panelWidth, sound: soundEnabled, backgroundSound: fire.backgroundSound }) + "\n");
     }
 
     property FileView panelStore: FileView {
@@ -124,6 +139,10 @@ Singleton {
         function onChangedByUser() { session.dirty = true; saveSoon.restart(); }
         function onStatusKeyChanged() { session.dirty = true; }
         function onBackgroundSoundChanged() { session.savePanel(); }
+        function onSoundRequested(enabled) {
+            session.soundEnabled = enabled;
+            session.savePanel();
+        }
     }
     property Timer saveSoon: Timer { interval: 500; onTriggered: session.save() }
     // While the fire burns, keep the file within 30 s of the truth.

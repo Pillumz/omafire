@@ -79,6 +79,7 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
   const savedAt = Date.now() - 100000;
   fs.writeFileSync(STATE, JSON.stringify({ version: 1, fuel: 1, heat: 0.9, savedAt }));
 
+  let soundAvailable = false;
   let qs = await launch("run1.log");
   try {
     assert.equal(ipc("omafire-harness", "widgets"), "2", "two bars registered");
@@ -132,8 +133,10 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
     assert.ok(Math.abs(saved.fuel - st.fuel) < 0.01, "actions are saved");
     assert.ok(Math.abs(saved.savedAt - Date.now()) < 5000);
 
+    ipc("omafire-harness", "resizePanel", 520);
     ipc("wesleygrimes.omafire", "sound");
     st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
+    soundAvailable = st.sound;
     await t.test("background audio stops when the last widget or wallpaper disappears", {
       skip: !st.sound && "QtMultimedia or an audio output is unavailable",
     }, () => {
@@ -152,10 +155,8 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
 
       ipc("omafire-harness", "restoreBar", 1);
       st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
-      assert.equal(st.sound, false, "re-enabling must not resume audio automatically");
-      ipc("wesleygrimes.omafire", "sound");
-      assert.equal(JSON.parse(ipc("wesleygrimes.omafire", "status")).audioPlaying, true,
-        "sound can be explicitly restarted after the widget returns");
+      assert.equal(st.sound, true, "rebuilt widgets restore the saved sound choice");
+      assert.equal(st.audioPlaying, true, "background audio resumes when the widget returns");
       ipc("omafire-harness", "wallpaper", true);
       ipc("omafire-harness", "removeBar", 1);
       assert.equal(JSON.parse(ipc("wesleygrimes.omafire", "status")).audioPlaying, true,
@@ -164,6 +165,13 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
       st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
       assert.equal(st.sound, false, "removing the last wallpaper also resets sound");
       assert.equal(st.audioPlaying, false, "no audio remains after the last view disappears");
+      ipc("omafire-harness", "wallpaper", true);
+      assert.equal(JSON.parse(ipc("wesleygrimes.omafire", "status")).audioPlaying, true,
+        "a returning wallpaper also restores background audio");
+      ipc("omafire-harness", "wallpaper", false);
+      // Saving another preference after shutdown must retain the sound choice.
+      ipc("omafire-harness", "resizePanel", 530);
+      assert.equal(JSON.parse(fs.readFileSync(path.join(DIR, "panel.json"), "utf8")).sound, true);
     });
   } finally {
     await qs.stop();
@@ -178,8 +186,18 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
     assert.equal(st.fuel, 0.68);
     assert.equal(st.status, "Burning steadily");
     assert.equal(st.backgroundSound, true, "background preference survives a restart");
-    assert.equal(st.sound, false, "restart still requires explicitly turning sound on");
-    assert.equal(st.audioPlaying, false);
+    assert.equal(st.sound, soundAvailable, "restart restores the sound choice when audio is available");
+    assert.equal(st.audioPlaying, soundAvailable, "background ambience resumes with the popup closed");
+    ipc("wesleygrimes.omafire", "open");
+    assert.equal(ipc("omafire-harness", "popupSize").split("x")[0], String(soundAvailable ? 530 : 520),
+      "panel width survives alongside the sound choices");
+    ipc("wesleygrimes.omafire", "backgroundSound");
+    assert.equal(JSON.parse(ipc("wesleygrimes.omafire", "status")).audioPlaying, soundAvailable,
+      "sound can still play in the open popup");
+    ipc("wesleygrimes.omafire", "close");
+    assert.equal(JSON.parse(ipc("wesleygrimes.omafire", "status")).audioPlaying, false,
+      "disabling background sound restores close-to-mute");
+    if (soundAvailable) ipc("wesleygrimes.omafire", "sound");
   } finally {
     await qs.stop();
   }
@@ -192,7 +210,26 @@ for (const host of HOSTS) test(`bar, session, persistence and IPC under Quickshe
     const st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
     assert.equal(st.status, "Resting");
     assert.equal(st.fuel, 0);
+    assert.equal(st.sound, false, "explicit Sound off survives a restart");
+    assert.equal(st.backgroundSound, false, "background sound off survives a restart");
+    assert.equal(st.audioPlaying, false);
   } finally {
     await qs.stop();
   }
+
+  // Existing installations have no sound field: keep their background choice
+  // and panel width without inventing an opt-in to playback.
+  fs.writeFileSync(path.join(DIR, "panel.json"), JSON.stringify({ width: 520, backgroundSound: true }));
+  qs = await launch("legacy.log");
+  try {
+    const st = JSON.parse(ipc("wesleygrimes.omafire", "status"));
+    assert.equal(st.sound, false, "legacy preferences default to sound off");
+    assert.equal(st.backgroundSound, true);
+    assert.equal(st.audioPlaying, false);
+    ipc("wesleygrimes.omafire", "open");
+    assert.equal(ipc("omafire-harness", "popupSize").split("x")[0], "520");
+  } finally {
+    await qs.stop();
+  }
+  assert.deepEqual(qmlProblems(qs.output()), []);
 });
