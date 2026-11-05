@@ -61,6 +61,15 @@ function begin(fox, previousPose) {
     }
     update(fox, 0);
 }
+function sniffDip(fox) {
+    var knots = fox.action.sniff;
+    for (var i = 1; i < knots.length; i++) {
+        var a = knots[i - 1], b = knots[i];
+        if (fox.poseAge <= b.at)
+            return mix(a.dip, b.dip, smooth((fox.poseAge - a.at) / (b.at - a.at)));
+    }
+    return 0;
+}
 function targetBody(fox) {
     var r = fox.rig, cycle = phase(fox), wave = cycle * Math.PI * 2;
     var run = fox.pose === "run" ? 1 : 0, travel = moving(fox.pose);
@@ -68,7 +77,7 @@ function targetBody(fox) {
     var seat = fox.pose === "sit" ? 1 : fox.pose === "settle"
         ? mix(r.startSeat, 1, smooth(progress)) : fox.pose === "rise"
         ? mix(r.startSeat, 0, smooth(progress)) : 0;
-    var dip = fox.pose === "sniff" ? 0.5 - 0.5 * Math.cos(fox.phase * Math.PI * 2) : 0;
+    var dip = fox.pose === "sniff" ? sniffDip(fox) : 0;
     var bob = travel ? -0.4 + Math.cos(wave * 2) * 0.4 : Math.sin(fox.age * 1.65) * 0.22;
     if (run) bob = -1.1 - Math.max(0, Math.sin(wave - 0.3)) * 1.8;
     var yaw = fox.direction > 0 ? 0 : Math.PI, headYaw = yaw;
