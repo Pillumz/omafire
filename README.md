@@ -79,8 +79,9 @@ The wallpaper extends the artwork to the left and right, filling each screen
 without stretching. Screens from 3:2 through 2:1 (including 16:9) show the full
 original campsite, with its fire, woodpile, fox, lake and stars unchanged. The
 popup keeps its original framing. Taller or wider screens still crop equally
-at opposite edges and may hide parts of the campsite. The extended sides are
-static scenery; there are no desktop buttons or extra shortcuts. Use the widget
+at opposite edges and may hide parts of the campsite. The fox can use the
+extended side trails and disappears only beyond the landscape or behind the
+right-hand rocks. There are no desktop buttons or extra shortcuts. Use the widget
 for stoking and sound. Audio remains off at login; **Keep sound when closed**
 controls whether it continues when only the wallpaper is showing.
 
@@ -95,9 +96,10 @@ Without this plugin, the original Campfire theme uses its ordinary still image.
 Do not run the theme\'s optional `extras/install-live`: that starts a separate
 recorded video, not the shared interactive fire.
 
-The animation currently runs even behind covering windows. It keeps the existing
-360 by 240 pixel buffer and 20 fps drawing rate; opening the popup or adding
-monitors adds another view, not another simulation. It does not guarantee that
+The animation currently runs even behind covering windows. The fire keeps its
+360 by 240 pixel buffer; the wallpaper composes it into a 480 by 240 landscape
+at the same 20 fps drawing rate. Opening the popup or adding monitors adds
+another view of the shared simulation. It does not guarantee that
 different screens present the same frame at exactly the same instant.
 
 ### Replacing the old video wallpaper

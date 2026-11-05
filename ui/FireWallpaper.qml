@@ -49,8 +49,8 @@ Item {
 
             Item {
                 id: landscape
-                // Extend only the wallpaper's sides. Both layers share this
-                // scale; the original 360 x 240 scene and input stay intact.
+                // The fire keeps its original scale and coordinates; the fox
+                // and scene input also cover the extended side trails.
                 readonly property real cover: Math.max(desktop.width / 480, desktop.height / 240)
                 width: 480 * cover
                 height: 240 * cover
@@ -58,21 +58,9 @@ Item {
                 y: (desktop.height - height) / 2
                 clip: true
 
-                Image {
-                    anchors.fill: parent
-                    source: Qt.resolvedUrl("../assets/campsite-wide.webp")
-                    smooth: false
-                    mipmap: false
-                }
-
                 FireScene {
-                    id: scene
-                    // The wide art contains the untouched 720 x 480 original
-                    // at x=120: its logical central scene begins at x=60.
-                    x: 60 * landscape.cover
-                    y: 0
-                    width: 360 * landscape.cover
-                    height: landscape.height
+                    anchors.fill: parent
+                    wide: true
                     fire: FireSession.fire
                 }
             }

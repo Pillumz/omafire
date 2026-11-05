@@ -3,14 +3,16 @@ import QtQuick.Window
 import "fire.js" as Fire
 import "fox.js" as Fox
 
-// The 360 x 240 scene. fire.js composites each frame into a framebuffer; the
-// canvas copies only what changed into its image and the item is scaled
-// to the panel width with nearest sampling, so pixels stay crisp at any
-// output scale. Pointer positions map back into 360 x 240.
+// The original campsite, or its full 480 x 240 wallpaper landscape. The fire
+// keeps its original coordinates; the wide frame includes the fox's side
+// trails in the same incremental canvas. Pixels and input share one scale.
 Item {
     id: root
 
     required property QtObject fire
+    property bool wide: false
+    readonly property int sceneWidth: wide ? 480 : Fire.W
+    readonly property int sceneLeft: wide ? -60 : 0
     // Draw only while this is true (the popup is open and shown).
     property bool running: true
     property string fontFamily: "monospace"
@@ -23,15 +25,15 @@ Item {
     readonly property int fullFramesDrawn: canvas.fullFrames
 
     implicitWidth: 388
-    implicitHeight: Math.round(width * 2 / 3)
+    implicitHeight: Math.round(width * Fire.H / sceneWidth)
     clip: true
 
     // A Canvas backs itself with an image at its size times the output's
     // device pixel ratio. In Qt 6.12 putImageData draws through that scale
     // (one image pixel covers dpr x dpr device pixels, unfiltered), but
     // getImageData reads raw device pixels. So the scene canvas stays at
-    // 360 x 240 logical, and the decoder canvas is sized in device pixels
-    // (720 x 480 divided by the ratio) and draws the art unscaled, so
+    // native scene resolution, and the decoder is sized in device pixels
+    // (the art size divided by the ratio) and draws the art unscaled, so
     // getImageData returns it 1:1 (checked against ImageMagick's decode).
     // Ask the window, not Screen: with fractional scaling Screen reports the
     // output's integer scale (2 at 1.33x and at 1.6x) while the window really
@@ -45,8 +47,8 @@ Item {
     property real decodedDpr: 0
     onDprChanged: if (decodedDpr > 0 && decodedDpr !== dpr) { decodedDpr = 0; canvas.bg = null; }
 
-    // Decodes the approved art once at its own 720 x 480 size; fire.js
-    // samples it down to 360 x 240 exactly like the reference drawImage.
+    // Decode at the art's own size, then sample with the reference's nearest
+    // rule. The wide art contains the original campsite unchanged at x=120.
     Loader {
         id: decoder
         // Wait for a window: the art is decoded once and cached, so a decode
@@ -55,8 +57,10 @@ Item {
         visible: false
         sourceComponent: Canvas {
             id: decodeCanvas
-            readonly property url art: Qt.resolvedUrl("../../assets/campsite-approved.webp")
-            width: 720 / root.dpr
+            readonly property url art: Qt.resolvedUrl(root.wide
+                ? "../../assets/campsite-wide.webp" : "../../assets/campsite-approved.webp")
+            readonly property int artWidth: root.sceneWidth * 2
+            width: artWidth / root.dpr
             height: 480 / root.dpr
             visible: false
             // An image another canvas already loaded comes from Qt's cache
@@ -72,26 +76,36 @@ Item {
                 ctx.scale(1 / root.dpr, 1 / root.dpr);
                 ctx.drawImage(art, 0, 0);
                 ctx.restore();
-                var px = ctx.getImageData(0, 0, 720, 480).data;
-                var src = new Uint8ClampedArray(720 * 480 * 4);
+                var px = ctx.getImageData(0, 0, artWidth, 480).data;
+                var src = new Uint8ClampedArray(artWidth * 480 * 4);
                 for (var i = 0; i < src.length; i++) src[i] = px[i];
                 root.decodedDpr = root.dpr;
-                canvas.bg = Fire.cacheBackground(Fire.prepareBackground(src, 720, 480));
-                canvas.repaintAll();
+                canvas.bg = Fire.cacheBackground(Fire.prepareBackground(src, artWidth, 480, root.sceneWidth));
+                root.fire.backgroundDecoded();
             }
         }
     }
 
     Canvas {
         id: canvas
-        width: Fire.W
+        width: root.sceneWidth
         height: Fire.H
         smooth: false
         antialiasing: false
-        transform: Scale { xScale: root.width / Fire.W; yScale: root.height / Fire.H }
+        transform: Scale { xScale: root.width / root.sceneWidth; yScale: root.height / Fire.H }
 
-        property var bg: root.reuseArt ? Fire.cachedBackground() : null
-        property var fb: Fire.createFrame()
+        property var bg: root.reuseArt ? Fire.cachedBackground(root.sceneWidth) : null
+        property var fb: new Uint8ClampedArray(root.sceneWidth * Fire.H * 4)
+        // The fire renderer still owns its small, original frame. Cache row
+        // views once, so assembling the wider scene allocates nothing per paint.
+        property var coreFrame: root.wide ? Fire.createFrame() : fb
+        property var coreRows: {
+            var rows = [];
+            if (root.wide) for (var y = 0; y < Fire.H; y++)
+                rows.push(coreFrame.subarray(y * Fire.W * 4, (y + 1) * Fire.W * 4));
+            return rows;
+        }
+        property var coreBg: bg && root.wide ? Fire.cachedBackground() : bg
         property int frames: 0
         property int fullFrames: 0
 
@@ -129,6 +143,12 @@ Item {
             function onFrameSwapped() { canvas.swaps++; }
         }
         Connections {
+            target: root.fire
+            // A corrected decode updates shared cache bytes in place. Every
+            // view must replace its static pixels as well as animated tiles.
+            function onBackgroundDecoded() { canvas.repaintAll(); }
+        }
+        Connections {
             target: root
             function onDprChanged() { canvas.repaintAll(); }
             function onVisibleChanged() { canvas.repaintAll(); }
@@ -150,7 +170,7 @@ Item {
         readonly property int tile: 12
         readonly property int segTiles: 5
         readonly property int segsX: Math.ceil(tilesX / segTiles)
-        readonly property int tilesX: Fire.W / tile
+        readonly property int tilesX: root.sceneWidth / tile
         readonly property int tilesY: Fire.H / tile
         property var rectsA: Fire.createRects()
         property var rectsB: Fire.createRects()
@@ -166,7 +186,7 @@ Item {
         property var segImages: []
         // fb and what the canvas shows, a pixel per word (RGBA, little-endian).
         property var fb32: new Uint32Array(fb.buffer)
-        property var shown: new Uint32Array(Fire.W * Fire.H)
+        property var shown: new Uint32Array(root.sceneWidth * Fire.H)
 
         function markTiles(list) {
             var r = list.r, f = tileFlags, b = tileBox, T = tile, cols = tilesX;
@@ -219,7 +239,7 @@ Item {
         // if its image is stale) into its segment's image; true if any
         // changed.
         function copyTile(ctx, index) {
-            var T = tile, W = Fire.W, tx = index % tilesX, ty = (index - tx) / tilesX, sg = (tx / segTiles) | 0;
+            var T = tile, W = root.sceneWidth, tx = index % tilesX, ty = (index - tx) / tilesX, sg = (tx / segTiles) | 0;
             var d = segment(ctx, ty, sg).data, f = fb32, s = shown, stale = tileStale[index] === 1, changed = false;
             var ox = tx * T, oy = ty * T, sx = sg * segTiles * T, sw = segTiles * T, b = tileBox, bi = index * 4, j, i, e, v;
             var x0 = ox, y0 = oy, x1 = ox + T, y1 = oy + T;
@@ -239,12 +259,12 @@ Item {
 
         // The whole frame in one put, through `out`.
         function putAll(ctx) {
-            var d = out.data, f = fb32, n = Fire.W * Fire.H, v;
+            var d = out.data, f = fb32, n = root.sceneWidth * Fire.H, v;
             for (var i = 0, j = 0; i < n; i++, j += 4) {
                 v = f[i];
                 d[j] = v & 255; d[j + 1] = (v >>> 8) & 255; d[j + 2] = (v >>> 16) & 255;
             }
-            ctx.putImageData(out, 0, 0, 0, 0, Fire.W, Fire.H);
+            ctx.putImageData(out, 0, 0, 0, 0, root.sceneWidth, Fire.H);
             shown.set(f);
             tileStale.fill(1);
             tileFlags.fill(0);
@@ -253,6 +273,22 @@ Item {
         function drawWildlife(frame, dirty) {
             var bounds = Fox.draw(frame, root.fire.wildlife.fox, root.fire.heat);
             if (bounds) Fire.includeRect(dirty, bounds[0], bounds[1], bounds[2], bounds[3]);
+        }
+
+        function renderFrame(dirty) {
+            Fire.render(coreFrame, root.fire.sim, coreBg, dirty, drawWildlife);
+            if (!root.wide) return;
+            // Draw the trails over the extended art, then replace the center
+            // with the fire's frame, which keeps held/thrown logs in front.
+            fb.set(bg);
+            for (var i = 0; i < dirty.n * 4; i += 4) {
+                dirty.r[i] -= root.sceneLeft;
+                dirty.r[i + 2] -= root.sceneLeft;
+            }
+            var bounds = Fox.draw(fb, root.fire.wildlife.fox, root.fire.heat, root.sceneLeft, root.sceneWidth);
+            if (bounds) Fire.includeRect(dirty, bounds[0], bounds[1], bounds[2], bounds[3], root.sceneWidth);
+            for (var y = 0; y < Fire.H; y++)
+                fb.set(coreRows[y], (y * root.sceneWidth - root.sceneLeft) * 4);
         }
 
         onPaint: {
@@ -265,11 +301,11 @@ Item {
                 // the canvas's size replaces the backing image 1:1 in device
                 // pixels on Wayland (half size at scale 2), not through the
                 // device scale like any other put.
-                out = imageBuffer(ctx, Fire.W, Fire.H + 1);
+                out = imageBuffer(ctx, root.sceneWidth, Fire.H + 1);
             }
             var cur = flip ? rectsA : rectsB, prev = flip ? rectsB : rectsA;
             flip = !flip;
-            Fire.render(fb, root.fire.sim, bg, cur, drawWildlife);
+            renderFrame(cur);
             if (fullLeft > 0) {
                 // Counts only once the window has presented since the last
                 // full frame (or when there is no window to ask).
@@ -317,7 +353,7 @@ Item {
         property string cursorName: "default"
         cursorShape: cursorName === "grabbing" ? Qt.ClosedHandCursor : cursorName === "grab" ? Qt.OpenHandCursor : Qt.ArrowCursor
 
-        function sx(x) { return x * Fire.W / root.width; }
+        function sx(x) { return root.sceneLeft + x * root.sceneWidth / root.width; }
         function sy(y) { return y * Fire.H / root.height; }
 
         onPressed: function (mouse) {

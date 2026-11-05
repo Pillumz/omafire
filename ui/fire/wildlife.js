@@ -19,16 +19,16 @@ function dismiss(state) {
 }
 
 // Paths go AROUND the hearth, never through the fire or across the lake.
-// The three mouths are beyond the whole sprite, so departures cannot pop.
-// Only the upper-right trail passes behind the painted boulder.
+// Edge mouths clear the whole 480px landscape plus the sprite. The upper
+// trail ends fully behind the painted boulder, before its far side.
 var GROUND = [
-    { x: -44, y: 186, links: [1] }, // left trail, above the foreground rocks
+    { x: -104, y: 186, links: [1] }, // left trail, above the foreground rocks
     { x: 76, y: 187, links: [0, 7] }, // scents below the woodpile
     { x: 170, y: 225, links: [7, 3] }, // foreground clearing
     { x: 284, y: 208, links: [2, 4, 6] }, // trail fork, above the lower-right rock
     { x: 255, y: 182, links: [3, 5] }, // quiet side of the hearth
-    { x: 404, y: 176, links: [4] }, // behind the right boulder
-    { x: 404, y: 208, links: [3] }, // right foreground trail
+    { x: 332, y: 174, links: [4] }, // behind the right boulder
+    { x: 464, y: 190, links: [3] }, // right trail slopes behind the extended foreground
     { x: 120, y: 219, links: [1, 2] } // bend between the left rocks and hearth
 ];
 var COVERS = [0, 5, 6];

@@ -74,7 +74,7 @@ Ported from `reference/animation.js` with identical arithmetic and random draw o
 
 The native moonlight overlay leaves the original artwork unchanged. It gently brightens and dims the painted reflection and adds short silver-blue glints. A cached color mask restricts it to water and reflected light beneath the moon; the island and foreground pines occlude the effect. Animation uses `elapsed` and deterministic hashes without consuming the simulation's random stream. It runs through the existing scene timer and dirty-region copying path, so it stops drawing when the popup closes and follows the reduced-motion frame rate.
 
-The scene Canvas is 360 x 240 logical and scaled to the 388 px interior with `smooth: false`. Qt 6.12 quirks found and worked around:
+The popup Canvas is 360 x 240 logical and scaled to the 388 px interior with `smooth: false`. The wallpaper Canvas is 480 x 240, containing the unchanged fire frame and extended fox trails. Qt 6.12 quirks found and worked around:
 
 - `putImageData(img, x, y)` without the four dirty arguments draws nothing.
 - With a non-zero dirty origin it crops the image and then offsets by the origin again, so the region lands in the wrong place. OmaFire puts image segments up to 60 x 12 pixels at their own position with a 0,0 origin.
@@ -139,8 +139,10 @@ visible visits do more rendering work, including subtle stationary motion.
 The coat changes from cool moonlight to flickering warm firelight as it
 approaches a lit hearth; light stays on the world-space fire-facing side on
 either side of camp. A cached silhouette of the right rock/grass cluster hides
-the animal on the upper trail, but not when it passes in front. All entrances
-extend beyond the full sprite width to avoid popping at the scene edges.
+the animal on the upper trail, but not when it passes in front. The rock
+entrance ends fully under that silhouette, before the boulder's far side;
+the side-trail entrances extend a full sprite width beyond the 480px landscape.
+The right trail slopes away from the extended foreground stones.
 A small blended contact shadow anchors its feet. The approved background is
 unchanged.
 
@@ -205,14 +207,18 @@ available through Omarchy's menu (Super+Space). Removing the live layer restores
 the ordinary desktop click behavior.
 
 Each window centers a 480 x 240 logical landscape with
-`max(screenWidth / 480, screenHeight / 240)` scaling. A static, nearest-sampled
-Image displays `assets/campsite-wide.webp` (960 x 480), whose central 720 x 480
-pixels are the unchanged original artwork at x=120, y=0. The original FireScene
-is a separate child of the landscape, overlaid at logical x=60, y=0, using the
-same scale. It retains its own clip, 360 x 240 buffer, cached art, animation and
-pointer mapping; the landscape also clips its children. The wide Image is not
-inside FireScene's central clip, so the extended sides remain visible. They
-are static scenery, and unused pointer input still stops at the desktop window.
+`max(screenWidth / 480, screenHeight / 240)` scaling. A single wide FireScene
+samples `assets/campsite-wide.webp` (960 x 480), whose central 720 x 480 pixels
+are the unchanged original artwork at x=120, y=0. Fire rendering still uses
+its original 360 x 240 buffer and coordinates. The canvas combines its frame
+at logical x=60 with the wider artwork and the same fox drawn across the side
+trails. Copying the fire frame last preserves held/thrown logs in front of
+the animal. Dirty rectangles include both the translated core and full fox
+bounds, so old side-trail positions restore incrementally. Background caches
+retain both widths and share one canonical center for the moonlight mask.
+Corrected device-scale decodes refresh all views of the shared fire.
+Pointer positions subtract the 60px margin before reaching the fire and visitor. The landscape clips
+at its actual edges; unused clicks still stop at the desktop window.
 
 Artwork provenance: the side scenery was generated with OpenAI `gpt-image-2`;
 only the generated side strips were retained. `assets/campsite-approved.webp`
@@ -257,6 +263,35 @@ After — full original scene with extended woodland sides and live fox:
 ![Extended 16:9 campsite](screenshots/widescreen-after.webp)
 
 These are disposable-VM captures, not screenshots of the owner's live desktop.
+
+## Fox landscape boundaries (2026-11-05)
+
+The fox now uses the full wallpaper canvas. Both side trails end beyond the
+expanded landscape; the rock trail starts and finishes behind the boulder's
+painted silhouette and surrounding ferns. The popup keeps its original crop.
+
+Before — the old right scene edge cuts off the brush tail:
+
+![Fox clipped at the old central scene edge](screenshots/fox-boundaries-before.webp)
+
+After — the whole fox continues into the extended scenery:
+
+![Fox crossing the former scene edge](screenshots/fox-boundaries-after.webp)
+
+Rock entrance, captured from the actual wide FireScene:
+
+![Fox emerging along the rock contour](screenshots/fox-rock-contour.gif)
+
+Verification used a disposable Omarchy VM: all 56 standard checks passed with
+no skips, including matching popup/wallpaper pixels at 1x/2x, clicks on both
+extensions, and clean incremental restoration. Real pointer clicks startled
+the fox on each added trail. An empty-side drag did nothing; a woodpile-to-fire
+drag added 0.25 fuel. Previews were inspected at 1.6x and 4/3x scales, at full
+and half window sizes. A separate 300-seed normal/startled-visit audit checked
+1,200 entry/near-departure/departure renders: no fox or shadow pixels were
+visible at those endpoints. Twenty global plugin reloads completed in the same
+shell process, with reconstruction taking 0.58–0.72 s and main-thread CPU
+settling to 2.5–5% of one core. This VM measurement is not a hardware benchmark.
 
 ## CPU and memory (measured)
 

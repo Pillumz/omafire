@@ -43,12 +43,12 @@ ShellRoot {
     FloatingWindow {
         id: window
         title: "OmaFire — fox preview"
-        implicitWidth: 1110
+        implicitWidth: 1350
         implicitHeight: 578
         color: "#101820"
 
         Flow {
-            x: 12; y: 8; width: 1086; spacing: 8
+            x: 12; y: 8; width: window.width - 24; spacing: 8
             Repeater {
                 model: ["Play visit", "Next fox", "Listen", "Sniff", "Rest", "Turn", "Spook", "Pause / resume", "Step frame", "Slow / normal"]
                 Rectangle {
@@ -74,8 +74,12 @@ ShellRoot {
                 }
             }
         }
-        FireScene { id: scene; x: 0; y: 82; width: 720; height: 480; fire: fire }
-        FirePopup { x: 720; y: 82; width: 390; fire: fire; running: true }
+        FireScene {
+            id: scene; x: 0; y: 82
+            width: Math.min(960, window.width - 390); height: width / 2
+            wide: true; fire: fire
+        }
+        FirePopup { x: scene.width; y: 82; width: 390; fire: fire; running: true }
     }
     function startRecording(directory, seconds, spookAt) {
         root.playing = false;
@@ -110,7 +114,7 @@ ShellRoot {
                 fire.sync();
                 painted = scene.framesDrawn;
                 busy = false;
-            }, Qt.size(720, 480));
+            }, Qt.size(960, 480));
         }
     }
     IpcHandler {
@@ -121,7 +125,7 @@ ShellRoot {
         function pose(value: string): void { root.inspectPose(value); }
         function state(): string { return JSON.stringify(fire.wildlife); }
         function capture(path: string): void {
-            scene.grabToImage(function(result) { result.saveToFile(path); }, Qt.size(720, 480));
+            scene.grabToImage(function(result) { result.saveToFile(path); }, Qt.size(960, 480));
         }
         function record(directory: string, seconds: real, spookAt: real): void {
             root.inspectAt(0);

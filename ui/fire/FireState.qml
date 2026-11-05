@@ -42,6 +42,8 @@ QtObject {
     readonly property string hint: Fire.HINT
 
     signal changedByUser()
+    // Views share decoded art; a device-scale correction refreshes them all.
+    signal backgroundDecoded()
 
     property real lastWall: Date.now()
     property var audioObject: null
