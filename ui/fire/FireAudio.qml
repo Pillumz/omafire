@@ -3,7 +3,7 @@ import QtMultimedia
 import "night.js" as Night
 import "sound.js" as Sound
 
-// The fire's sound. Only FireState creates this, on the first Sound press, so
+// The fire's sound. Only FireState creates this, when sound is enabled, so
 // a shell without QtMultimedia still loads the rest of OmaFire.
 //
 // MediaPlayer rather than SoundEffect: SoundEffect plays only formats the

@@ -89,8 +89,8 @@ app-sandbox exec -- pactl set-default-sink omafire_test
 Turn sound and **Keep sound when closed** on, close the popup, and check
 `omarchy-shell wesleygrimes.omafire status` and the guest sink's monitor.
 Verify that **Sound off** silences it, disabling background sound restores
-close-to-mute behavior, and restarting the guest shell keeps the preference
-but starts muted. The popup should still stop animating while closed. With Campfire selected,
+close-to-mute behavior, and restarting the guest shell restores both sound choices and resumes enabled
+background ambience. Also verify that explicitly turning sound off survives a restart. The popup should still stop animating while closed. With Campfire selected,
 the desktop keeps animating from the same fire. Verify a successful desktop log
 drop increases fuel, an off-target drop does not, and switching away from the
 theme removes the live layer. Check the woodpile and fire at more than one

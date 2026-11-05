@@ -23,7 +23,7 @@ That's the whole install. The fire is in the right side of your bar.
 - **Poke the coals.** Click the coals for a shower of sparks. Very satisfying, no practical value.
 - **Watch for a visitor.** A red fox sometimes slips behind the right-hand rocks or wanders in along either foreground trail. It might simply pass through, follow a scent and double back, stop to listen, or settle for a quiet moment. Entrances, exits, pace and pauses vary; it walks around the hearth, not through it. Click near it and it bounds toward the nearest cover, rising or turning first when needed. Its ears twitch, its brush tail sways, and firelight catches its russet coat. The popup and wallpaper share the same visitor, which never needs feeding or attention.
 - **Listen to it.** **Sound on** plays the fire. It follows the fire: a low fire is soft embers, a steady one crackles, a hot or stoked one roars, and adding a log or stoking has its own sound. With the sound on, crickets chirp in short phrases from off in the trees, and a frog calls now and then. Both stay soft, as if they were across the water.
-- **Keep the ambience.** Turn **Keep sound when closed** on to let the fire, crickets and frogs keep playing after you close the popup. Turn **Sound off** to silence everything. Background sound defaults to off; its preference is remembered, but sound itself always starts off after a shell restart or login. Closing the popup stops its scene animation; an active live wallpaper keeps animating.
+- **Keep the ambience.** Turn **Keep sound when closed** on to let the fire, crickets and frogs keep playing after you close the popup. Turn **Sound off** to silence everything. Sound and background sound default to off. Both choices are remembered across shell restarts, deployments and logins, so enabled background ambience resumes automatically. Closing the popup stops its scene animation; an active live wallpaper keeps animating.
 - **Leave it alone.** A full load burns for about 13 minutes, down to glowing embers, then coals, then rest. It keeps burning while the popup is closed, and after a restart or a suspend it picks up where it would have been.
 
 The bar icon is a little pixel fire that follows along, so you can tell at a glance whether it needs a log. Hover it for the status.
@@ -82,8 +82,8 @@ popup keeps its original framing. Taller or wider screens still crop equally
 at opposite edges and may hide parts of the campsite. The fox can use the
 extended side trails and disappears only beyond the landscape or behind the
 right-hand rocks. There are no desktop buttons or extra shortcuts. Use the widget
-for stoking and sound. Audio remains off at login; **Keep sound when closed**
-controls whether it continues when only the wallpaper is showing.
+for stoking and sound. Your sound choice is restored at login; **Keep sound when closed**
+controls whether it plays when only the wallpaper is showing.
 
 Switching to another theme removes the live layer and reveals the normal
 wallpaper. No changes to Omarchy or Hyprland, no video player, and no additional
@@ -165,7 +165,7 @@ omarchy plugin remove wesleygrimes.omafire --yes
 rm -rf ~/.local/state/omafire
 ```
 
-The second line deletes the saved fire (fuel and heat), panel size and background-sound preference. OmaFire doesn't write anywhere else.
+The second line deletes the saved fire (fuel and heat), panel size and sound preferences. OmaFire doesn't write anywhere else.
 
 ### Manual install
 
@@ -185,7 +185,7 @@ The fire started life as a small browser prototype. OmaFire ports its drawing co
 
 Each view draws only while active, and copies only the parts of the picture that changed. Without a live wallpaper, it only draws while the popup is open. With the popup closed the cost is the bar icon, which is about 1% of one core on my VM. With it open it's roughly a fifth of one core, which is about what a small animated campfire should cost you.
 
-State lives in `~/.local/state/omafire/state.json` (or under `$XDG_STATE_HOME`). Sound is never saved. The background-sound preference is remembered in `panel.json` beside that file. Drag the lower-left corner to resize the panel; its width is remembered there too, and the next open uses it. The scene stays 3:2.
+State lives in `~/.local/state/omafire/state.json` (or under `$XDG_STATE_HOME`). The sound and background-sound preferences are remembered in `panel.json` beside that file. Drag the lower-left corner to resize the panel; its width is remembered there too, and the next open uses it. The scene stays 3:2.
 
 The fox is articulated pixel art with sixteen-frame walking, sniffing, sitting, turning and bounding animations. Planted paws and a soft contact shadow give it weight; its layered coat catches cool moonlight and warmer, flickering light from the hearth. Its first visit comes after roughly 45–100 seconds of active scene time, with 2½–6 minute quiet gaps between visits. Visits stop when neither scene is active, and a suspend dismisses the current visitor rather than replaying missed encounters. No extra timer, process or saved animal state.
 

@@ -35,13 +35,14 @@ QtObject {
     property bool toastVisible: false
     property bool dragging: false
     property bool sound: false
-    // Saved separately from sound: allow ambience while the popup is closed,
-    // but never start playback automatically after a shell restart.
+    // Allow ambience while the popup is closed. FireSession remembers both
+    // sound preferences separately from temporary playback shutdown.
     property bool backgroundSound: false
     property bool audioAvailable: true
     readonly property string hint: Fire.HINT
 
     signal changedByUser()
+    signal soundRequested(bool enabled)
     // Views share decoded art; a device-scale correction refreshes them all.
     signal backgroundDecoded()
 
@@ -144,7 +145,13 @@ QtObject {
     // QtMultimedia lives in FireAudio.qml, created on first use, so a missing
     // module only costs the sound: the toast says so and it stays off.
     function toggleSound() {
-        if (sound) { sound = false; return; }
+        var enabled = !sound;
+        setSound(enabled);
+        soundRequested(enabled);
+    }
+
+    function setSound(enabled) {
+        if (!enabled) { sound = false; return; }
         if (!audioObject) {
             var c = Qt.createComponent(Qt.resolvedUrl("FireAudio.qml"));
             if (c.status === Component.Ready) audioObject = c.createObject(root, { heat: heat, boost: boost });
@@ -173,7 +180,10 @@ QtObject {
 
     function shutdown() {
         sound = false;
-        if (audioObject) { audioObject.stopNow(); audioObject.destroy(); audioObject = null; }
+        // Views can disappear briefly during a plugin rescan. Keep the idle
+        // players until this state is destroyed, so rebuilding views can resume
+        // without tearing down decoders that are still opening their sources.
+        if (audioObject) audioObject.stopNow();
     }
 
     // One simulation timer, regardless of the number of views.
