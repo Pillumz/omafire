@@ -94,10 +94,30 @@ subsequent gaps: 150–360 seconds. Visits choose a passing, foraging, lingering
 or wary intention. Three entrances (left/right foreground trails and the right
 boulder) connect to five dry-ground interest points around the hearth. Successive
 visits avoid repeating the same entrance. Scent investigations can double back;
-only lingering visits sit, for 5–12 seconds. Pace, listening pauses, sniff counts
+only lingering visits sit, for 5–12 seconds. Pace, listening pauses, scent stops
 and exits vary. Wary visits return to their entrance; others usually leave by
 a different route. Planning consumes the private RNG once per visit, not once
 per frame.
+
+Scent stops last 2.2–5.8 seconds. The nose lowers, lingers near the ground with
+small, uneven height adjustments, then rises at its own pace. Some longer
+investigations include a partial head lift and another check of the scent.
+Each stop has its own timed, smoothly interpolated head positions, replacing
+the repeating 1.5-second down/up wave. These details are planned after the
+route and other poses, so adding nose movements does not reshuffle a visit.
+
+Before (left) and after (right), captured at normal speed from the actual QML
+scene using seed 1:
+
+![Repeating head bobs replaced with a lingering scent investigation](screenshots/fox-natural-sniff.gif)
+
+Verification (2026-11-05): inspected short, sustained and partial-lift sniffs
+in the disposable VM and clicked a nose-down fox through the real scene input.
+Its visible head position was preserved at the click before it raised its head
+and escaped. A 300-seed planning audit covered 419 scent stops and confirmed
+unchanged routes and other pose choices; a separate elapsed-slice comparison
+confirmed identical head motion at 1/60-second and 0.75-second updates. All 56
+standard checks passed in the VM with no skips.
 
 Travel accelerates, cruises and brakes along the original safe links. Connected
 same-facing links carry speed through waypoints, with a modest speed dip at

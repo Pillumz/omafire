@@ -49,6 +49,26 @@ function path(from, to, previous) {
     return null;
 }
 function pause(plan, pose, duration) { plan.push({ pose: pose, duration: duration }); }
+// Lower once and work the scent with small, uneven nose movements. A longer
+// investigation may include a half-lift and recheck, never a looping head bob.
+function planSniff(state, action) {
+    var down = between(state, 0.35, 0.8), up = between(state, 0.4, 0.85);
+    var lowUntil = action.duration - up, depth = between(state, 0.86, 0.99);
+    var knots = [{ at: 0, dip: 0 }, { at: down, dip: depth }], at = down;
+    while (at < lowUntil) {
+        at = Math.min(lowUntil, at + between(state, 0.5, 1.15));
+        if (lowUntil - at < 0.35) at = lowUntil;
+        // Stay down for the first interval before gently nosing a little higher
+        // or lower. Even a short investigation has time to hold the scent.
+        knots.push({ at: at, dip: knots.length === 2 ? depth : between(state, 0.82, 0.99) });
+    }
+    if (knots.length > 4 && random(state) < 0.28) {
+        var recheck = 3 + Math.floor(random(state) * (knots.length - 4));
+        knots[recheck].dip = between(state, 0.25, 0.5);
+    }
+    knots.push({ at: action.duration, dip: 0 });
+    action.sniff = knots;
+}
 function travel(plan, from, to, speed) {
     var route = path(from, to, -1);
     for (var i = 0; i < route.length; i++) plan.push({ pose: "walk", node: route[i], speed: speed });
@@ -75,7 +95,7 @@ function startVisit(state) {
             node = travel(plan, node, pick(state, nearby), speed);
         }
         if (mood === "foraging" || random(state) < 0.55)
-            pause(plan, "sniff", (1 + Math.floor(random(state) * 3)) * 1.5);
+            pause(plan, "sniff", between(state, 2.2, 5.8));
         pause(plan, mood === "wary" || random(state) < 0.35 ? "alert" : "idle", between(state, 1, 3.5));
         if (mood === "lingering" && i === stops - 1) {
             pause(plan, "settle", 0.8);
@@ -86,6 +106,10 @@ function startVisit(state) {
     var exit = mood === "wary" || (mood !== "passing" && random(state) < 0.3) ? entry
         : pick(state, COVERS.filter(function(n) { return n !== entry; }));
     travel(plan, node, exit, speed);
+    // Choose the route first, so extra nose movements don't change where the
+    // fox goes or which other poses the seeded visit includes.
+    for (var s = 0; s < plan.length; s++)
+        if (plan[s].pose === "sniff") planSniff(state, plan[s]);
     state.wait = 0;
     state.fox = {
         x: GROUND[entry].x, y: GROUND[entry].y, node: entry,
@@ -266,9 +290,9 @@ function advance(state, dt) {
         fox.gaitDistance += Math.sqrt(dx * dx + dy * dy);
         fox.phase = fox.pose === "walk" || fox.pose === "run"
             ? Rig.phase(fox)
-            : fox.pose === "turn" || fox.pose === "settle" || fox.pose === "rise"
+            : fox.pose === "turn" || fox.pose === "settle" || fox.pose === "rise" || fox.pose === "sniff"
             ? (action.startPhase || 0) + (1 - (action.startPhase || 0)) * progress
-            : (fox.poseAge / (fox.pose === "sniff" ? 1.5 : 2.4)) % 1;
+            : (fox.poseAge / 2.4) % 1;
         Rig.update(fox, step);
         dt -= step;
         if (fox.poseAge < duration) continue;
