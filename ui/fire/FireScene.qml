@@ -16,6 +16,7 @@ Item {
     // Draw only while this is true (the popup is open and shown).
     property bool running: true
     property string fontFamily: "monospace"
+    property real toastTopInset: 12
     // Start from the art an earlier scene decoded (tests turn this off to
     // exercise a decode that lands after the first paints).
     property bool reuseArt: true
@@ -372,11 +373,11 @@ Item {
     }
 
 
-    // Toast: top of the artwork, 12 px inset, centred, one line; fades .3 s.
+    // Toast: centred, one line; the wallpaper supplies a visible-screen inset.
     Rectangle {
         id: toast
         anchors.horizontalCenter: parent.horizontalCenter
-        y: 12
+        y: root.toastTopInset
         width: toastLabel.implicitWidth + 18 + 2
         height: 28
         color: "#e8101213"

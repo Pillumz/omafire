@@ -61,6 +61,9 @@ Item {
                 FireScene {
                     anchors.fill: parent
                     wide: true
+                    // Keep messages below the top bar, even when cover crops
+                    // the artwork above the visible desktop.
+                    toastTopInset: 60 - landscape.y
                     fire: FireSession.fire
                 }
             }
